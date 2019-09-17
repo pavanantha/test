@@ -1,0 +1,5 @@
+package com.aep.cx.utils.enums;
+
+public enum MessageType {
+	MCSXAT, MCSSMS, SMSMMS, XATFTP, XATPYM, MCSPYM, XATVPP, MCSVPP, MCSPPY, XATPPY, MCSCOR, XATCOR, XATREG, MCSREG ,MCSTEX, XATTEX
+}

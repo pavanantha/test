@@ -1,0 +1,22 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Bucket to hold all Lambda Packages per Env
+Parameters:
+  Namespace:
+    Type: String
+    Default: alerts
+    Description: Namespace for resource names - MUST BE LOWERCASE
+  Stage:
+    Type: String
+    Description: Stage for resource names - MUST BE LOWERCASE
+Resources:
+  LambdaPackagesBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub '${Stage}-${Namespace}-lambda-packages'
+      Tags: 
+        - Key: Name
+          Value: !Sub '${Stage}-${Namespace}-lambda-packages'
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256

@@ -1,0 +1,93 @@
+{
+  "019999998": [
+    {
+      "customerContacts": [
+        {
+          "endPoint": "madhatter@wonderland.com",
+          "webId": "aaron1"
+
+                  },
+        {
+          "endPoint": "6149499232",
+          "webId": "aaron1" 
+        }
+      ],
+      "customerInfo": {
+        "accountNumber": "123-abc",
+        "premiseNumber": "019999998",
+        "name": "Mrs.Happy",
+        "streetAddress":"123 Happy Trails",
+        "city": "Happy Town",
+        "state": "OH",
+        "zipCode": "90210"
+
+      }
+    }
+  ],
+  "019999999": [
+    {
+      "customerContacts": [
+        {
+          "webId": "aep1",
+          "endPoint": "whiterabbit@wonderland.com"
+        },
+        {
+          "webId": "aep1",
+          "endPoint": "6145981329"
+        }
+      ],
+      "customerInfo": {
+        "accountNumber": "567-dbe",
+        "premiseNumber": "019999999",
+        "name": "Mr.ExactTarget",
+        "streetAddress":"123 Mount Trails",
+        "city": "Camp Town",
+        "state": "OH",
+        "zipCode": "90210"
+      }
+    }
+  ],
+  "019999997": [
+    {
+      "customerContacts": [
+        {
+          "webId": "aep2",
+          "endPoint": "alice@wonderland.com"
+        },
+        {
+          "webId": "aep2",
+          "endPoint": "6148051126"
+        }
+      ],
+      "customerInfo": {
+        "accountNumber": "890-fgh",
+        "premiseNumber": "019999997",
+        "name": "Ms.Alice",
+        "streetAddress":"123 Wonderland Trail",
+        "city": "Wonderland City",
+        "state": "OH",
+        "zipCode": "98765"
+      }
+    }
+  ],
+  "953456666": [
+    {
+      "customerContacts": [
+        {
+          "webId": "aep3",
+          "endPoint": "6788871526"
+        }
+      ],
+      "customerInfo": {
+        "accountNumber": "890-fgh",
+        "premiseNumber": "953456666",
+        "name": "Ms.Alice",
+        "streetAddress":"123 Wonderland Trail",
+        "city": "Wonderland City",
+        "state": "OH",
+        "zipCode": "98765"
+      }
+    }
+  ]
+
+}

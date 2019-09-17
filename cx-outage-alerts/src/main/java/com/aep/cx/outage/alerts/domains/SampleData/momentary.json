@@ -1,0 +1,23 @@
+[{
+  "Data": [
+    {
+      "premiseNumber": "979999998",
+      "outageNumber": "3000391",
+      "outageStatus": "OFF",
+      "outageType": "predicted",
+      "premisePowerStatus": "off",
+      "outageCause": "test",
+      "outageSimpleCause": "test",
+      "outageETRType": "g",
+      "outageOverideFlag": "N",
+      "outageETR": "201906271445",
+      "outageCreationTime": "201906280835",
+      "outageRestorationTime": "201906291645",
+      "outageAsOfTime": "201906280835",
+      "outageArea": "1339",
+      "outageCustomerCount": "2",
+      "outageCustomerMAXCount": "2",
+      "outageTicketCount" : "1"
+    }
+  ]
+}]

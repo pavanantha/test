@@ -1,0 +1,88 @@
+<definitions xmlns:http="http://schemas.xmlsoap.org/wsdl/http/" xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" xmlns:s="http://www.w3.org/2001/XMLSchema" xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/" xmlns:mime="http://schemas.xmlsoap.org/wsdl/mime/" xmlns:s0="http://co1m:1211/MACSSWS/MCSKMQXI" xmlns="http://schemas.xmlsoap.org/wsdl/" targetNamespace="http://co1m:1211/MACSSWS/MCSKMQXI">
+<types>
+<s:schema elementFormDefault="qualified" targetNamespace="http://co1m:1211/MACSSWS/MCSKMQXI">
+<s:element name="DLVR2XI">
+<s:complexType>
+<s:sequence>
+<s:element minOccurs="1" maxOccurs="1" name="DLVR2XIInput" type="s0:DLVR2XIInput"/>
+</s:sequence>
+</s:complexType>
+</s:element>
+<s:complexType name="DLVR2XIInput">
+<s:sequence>
+<s:element minOccurs="1" maxOccurs="1" nillable="true" name="Aws_request" type="s:string"/>
+<s:element minOccurs="1" maxOccurs="1" nillable="true" name="Aws_result" type="s:string"/>
+<s:element minOccurs="1" maxOccurs="1" nillable="true" name="Aws_rec_cnt" type="s:short"/>
+<s:element minOccurs="1" maxOccurs="1" nillable="true" name="Aws_input" type="s0:DLVR2XIInputAws_input"/>
+</s:sequence>
+</s:complexType>
+<s:complexType name="DLVR2XIInputAws_input">
+<s:sequence>
+<s:element minOccurs="1" maxOccurs="1000" nillable="true" name="Aws_records" type="s0:DLVR2XIInputAws_inputAws_records"/>
+</s:sequence>
+</s:complexType>
+<s:complexType name="DLVR2XIInputAws_inputAws_records">
+<s:sequence>
+<s:element minOccurs="1" maxOccurs="1" nillable="true" name="Aws_delivery_text" type="s:string"/>
+</s:sequence>
+</s:complexType>
+<s:element name="DLVR2XIResponse">
+<s:complexType>
+<s:sequence>
+<s:element minOccurs="1" maxOccurs="1" name="DLVR2XIResult" type="s0:DLVR2XIOutput"/>
+</s:sequence>
+</s:complexType>
+</s:element>
+<s:complexType name="DLVR2XIOutput">
+<s:sequence>
+<s:element minOccurs="1" maxOccurs="1" nillable="true" name="Aws_request" type="s:string"/>
+<s:element minOccurs="1" maxOccurs="1" nillable="true" name="Aws_result" type="s:string"/>
+<s:element minOccurs="1" maxOccurs="1" nillable="true" name="Aws_rec_cnt" type="s:short"/>
+<s:element minOccurs="1" maxOccurs="1" nillable="true" name="Aws_input" type="s0:DLVR2XIOutputAws_input"/>
+</s:sequence>
+</s:complexType>
+<s:complexType name="DLVR2XIOutputAws_input">
+<s:sequence>
+<s:element minOccurs="1" maxOccurs="1000" nillable="true" name="Aws_records" type="s0:DLVR2XIOutputAws_inputAws_records"/>
+</s:sequence>
+</s:complexType>
+<s:complexType name="DLVR2XIOutputAws_inputAws_records">
+<s:sequence>
+<s:element minOccurs="1" maxOccurs="1" nillable="true" name="Aws_delivery_text" type="s:string"/>
+</s:sequence>
+</s:complexType>
+</s:schema>
+</types>
+<message name="DLVR2XISoapOut">
+<part name="parameters" element="s0:DLVR2XIResponse"/>
+</message>
+<message name="DLVR2XISoapIn">
+<part name="parameters" element="s0:DLVR2XI"/>
+</message>
+<portType name="MCSKMQXISoap">
+<operation name="DLVR2XI">
+<input message="s0:DLVR2XISoapIn"/>
+<output message="s0:DLVR2XISoapOut"/>
+</operation>
+</portType>
+<binding name="MCSKMQXISoap" type="s0:MCSKMQXISoap">
+<soap:binding transport="http://schemas.xmlsoap.org/soap/http" style="document"/>
+<operation name="DLVR2XI">
+<soap:operation soapAction="http://co1m:1211/MACSSWS/MCSKMQXI/DLVR2XI" style="document"/>
+<input>
+<soap:body use="literal" parts="parameters"/>
+</input>
+<output>
+<soap:body use="literal"/>
+</output>
+</operation>
+</binding>
+<service name="MCSKMQXI">
+<port name="MCSKMQXISoaphttp" binding="s0:MCSKMQXISoap">
+<soap:address location="http://CO1M:1211/MACSSWS/MCSKMQXI.zws"/>
+</port>
+<port name="MCSKMQXISoaphttps" binding="s0:MCSKMQXISoap">
+<soap:address location="https://CO1M:1212/MACSSWS/MCSKMQXI.zws"/>
+</port>
+</service>
+</definitions>

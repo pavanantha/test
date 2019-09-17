@@ -1,0 +1,37 @@
+pool:
+  name: default
+  demands: maven
+
+steps:
+- task: Maven@3
+  displayName: 'Maven pom.xml'
+  inputs:
+    mavenPomFile: 'pom.xml'
+    goals: 'clean package shade:shade -DskipTests=false'
+    publishJUnitResults: true 
+    codeCoverageToolOption: jaCoCo
+    codeCoverageClassFilesDirectories: 'cx-utils/target/classes,cx-utils/target/test-classes,cx-outage-alerts/target/classes,cx-outage-alerts/target/test-classes'
+    codeCoverageSourceDirectories: 'cx-utils/src,cx-outage-alerts/src'
+    checkStyleRunAnalysis: true
+    pmdRunAnalysis: true
+    findBugsRunAnalysis: true
+ 
+- task: CopyFiles@2
+  displayName: 'Copy Files to: $(build.artifactstagingdirectory)'
+  inputs:
+    SourceFolder: '$(system.defaultworkingdirectory)'
+    Contents: |
+        **/*.jar
+        *.yaml
+    TargetFolder: '$(build.artifactstagingdirectory)'
+
+- task: CopyFiles@2
+  displayName: 'Copy Files to: SampleData'
+  inputs:
+    SourceFolder: 'cx-outage-alerts/src/main/java/com/aep/cx/outage/alerts/domains/SampleData'
+    Contents: '**/*.*'
+    TargetFolder: '$(build.artifactstagingdirectory)/SampleData/OutageData'
+ 
+- task: PublishBuildArtifacts@1
+  displayName: 'Publish Artifact: drop'
+

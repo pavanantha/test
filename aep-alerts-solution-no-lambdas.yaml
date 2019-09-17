@@ -1,0 +1,1267 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: All AWS resources for the Alerts Solution per Stage (dev/QA/Prod)
+Parameters:
+  Namespace:
+    Type: String
+    Default: alerts
+    Description: Namespace for resource names - MUST BE LOWERCASE
+  Stage:
+    Type: String
+    Description: Stage for resource names - MUST BE LOWERCASE
+Mappings:
+  RegionMap:
+    us-east-1:
+      REGION: e1
+    us-west-1:
+      REGION: w1
+    us-east-2:
+      REGION: e2
+    us-west-2:
+      REGION: w2
+  Environment:
+    dev:
+      Subnets:
+        - subnet-07be4de00807b7c23
+        - subnet-08d31841f8fe54c65
+        - subnet-0baa3fb4d2d923e20
+        - subnet-0e2b23502d48125cc
+        - subnet-0ebe6ee4bc8c6cfca
+        - subnet-04afc5811679c5008
+      SGs:
+        - sg-0104b4ca1fdeb929c
+    qa:
+      Subnets:
+        - subnet-0c3ae96e12b8fb3a9
+        - subnet-096a4ab6680b37206
+        - subnet-0317e30219ed6ef40
+        - subnet-054a2eac04cc54851
+        - subnet-0e1124662f0d33b85
+        - subnet-079b50bb436b4a700
+      SGs:
+        - sg-000f671b12164e985
+    prod:
+      Subnets:
+        - subnet-0c3ae96e12b8fb3a9
+        - subnet-096a4ab6680b37206
+        - subnet-0317e30219ed6ef40
+        - subnet-054a2eac04cc54851
+        - subnet-0e1124662f0d33b85
+        - subnet-079b50bb436b4a700
+      SGs:
+        - sg-06e706217907f0b6b
+Conditions:
+  CreateProdResources: !Equals
+    - !Ref 'Stage'
+    - prod
+Resources:
+  OutageRawBucket:
+    # DependsOn: OutageRawBucketPermission
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub
+      - '${Stage}-${Namespace}-outage-raw-${Region}'
+      - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      Tags: 
+        - Key: Name
+          Value: !Sub
+          - '${Stage}-${Namespace}-outage-raw-${Region}'
+          - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration: !If
+        - CreateProdResources
+        - Status: Enabled
+        - !Ref 'AWS::NoValue'
+  #     NotificationConfiguration:
+  #       LambdaConfigurations:
+  #       - Event: 's3:ObjectCreated:*'
+  #         Function: !GetAtt ProcessOutagesFunction.Arn
+  # OutageRawBucketPermission:
+  #   Type: AWS::Lambda::Permission
+  #   Properties:
+  #     Action: 'lambda:InvokeFunction'
+  #     FunctionName: !Ref ProcessOutagesFunction
+  #     Principal: s3.amazonaws.com
+  #     SourceAccount: !Ref "AWS::AccountId"
+  #     SourceArn: !Sub 
+  #     - "arn:aws:s3:::${Stage}-${Namespace}-outage-raw-${Region}"
+  #     - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+  OutageSustainedBucket:
+    # DependsOn: OutageSustainedBucketPermission
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub
+      - '${Stage}-${Namespace}-outage-sustained-${Region}'
+      - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      Tags: 
+        - Key: Name
+          Value: !Sub
+          - '${Stage}-${Namespace}-outage-sustained-${Region}'
+          - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration: !If
+        - CreateProdResources
+        - Status: Enabled
+        - !Ref 'AWS::NoValue'
+  #     NotificationConfiguration:
+  #       LambdaConfigurations:
+  #       - Event: 's3:ObjectCreated:*'
+  #         Function: !GetAtt BuildSustainedNotificationsFunction.Arn
+  # OutageSustainedBucketPermission:
+  #   Type: AWS::Lambda::Permission
+  #   Properties:
+  #     Action: 'lambda:InvokeFunction'
+  #     FunctionName: !Ref BuildSustainedNotificationsFunction
+  #     Principal: s3.amazonaws.com
+  #     SourceAccount: !Ref "AWS::AccountId"
+  #     SourceArn: !Sub 
+  #     - "arn:aws:s3:::${Stage}-${Namespace}-outage-sustained-${Region}"
+  #     - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+  OutageFailedSustainedBucket:
+    # DependsOn: OutagefailedSustainedBucketPermission
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub
+      - '${Stage}-${Namespace}-outage-failed-sustained-${Region}'
+      - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      Tags: 
+        - Key: Name
+          Value: !Sub
+          - '${Stage}-${Namespace}-outage-failed-sustained-${Region}'
+          - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration: !If
+        - CreateProdResources
+        - Status: Enabled
+        - !Ref 'AWS::NoValue'
+  #     NotificationConfiguration:
+  #       LambdaConfigurations:
+  #       - Event: 's3:ObjectCreated:*'
+  #         Function: !GetAtt BuildSustainedNotificationsFunction.Arn
+  # OutagefailedSustainedBucketPermission:
+  #   Type: AWS::Lambda::Permission
+  #   Properties:
+  #     Action: 'lambda:InvokeFunction'
+  #     FunctionName: !Ref BuildSustainedNotificationsFunction
+  #     Principal: s3.amazonaws.com
+  #     SourceAccount: !Ref "AWS::AccountId"
+  #     SourceArn: !Sub 
+  #     - "arn:aws:s3:::${Stage}-${Namespace}-outage-failed-sustained-${Region}"
+  #     - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]               
+  OutageRestoredBucket:
+    # DependsOn: OutageRestoredBucketPermission
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub
+      - '${Stage}-${Namespace}-outage-restored-${Region}'
+      - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      Tags: 
+        - Key: Name
+          Value: !Sub
+          - '${Stage}-${Namespace}-outage-restored-${Region}'
+          - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration: !If
+        - CreateProdResources
+        - Status: Enabled
+        - !Ref 'AWS::NoValue'
+  #     NotificationConfiguration:
+  #       LambdaConfigurations:
+  #       - Event: 's3:ObjectCreated:*'
+  #         Function: !GetAtt BuildRestoredNotificationsFunction.Arn
+  # OutageRestoredBucketPermission:
+  #   Type: AWS::Lambda::Permission
+  #   Properties:
+  #     Action: 'lambda:InvokeFunction'
+  #     FunctionName: !Ref BuildRestoredNotificationsFunction
+  #     Principal: s3.amazonaws.com
+  #     SourceAccount: !Ref "AWS::AccountId"
+  #     SourceArn: !Sub 
+  #     - "arn:aws:s3:::${Stage}-${Namespace}-outage-restored-${Region}"
+  #     - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+  OutageFailedRestoredBucket:
+    # DependsOn: OutageFailedRestoredBucketPermission
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub
+      - '${Stage}-${Namespace}-outage-failed-restored-${Region}'
+      - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      Tags: 
+        - Key: Name
+          Value: !Sub
+          - '${Stage}-${Namespace}-outage-failed-restored-${Region}'
+          - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration: !If
+        - CreateProdResources
+        - Status: Enabled
+        - !Ref 'AWS::NoValue'
+  #     NotificationConfiguration:
+  #       LambdaConfigurations:
+  #       - Event: 's3:ObjectCreated:*'
+  #         Function: !GetAtt BuildRestoredNotificationsFunction.Arn
+  # OutageFailedRestoredBucketPermission:
+  #   Type: AWS::Lambda::Permission
+  #   Properties:
+  #     Action: 'lambda:InvokeFunction'
+  #     FunctionName: !Ref BuildRestoredNotificationsFunction
+  #     Principal: s3.amazonaws.com
+  #     SourceAccount: !Ref "AWS::AccountId"
+  #     SourceArn: !Sub 
+  #     - "arn:aws:s3:::${Stage}-${Namespace}-outage-failed-restored-${Region}"
+  #     - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]      
+  OutageMomentaryBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub
+      - '${Stage}-${Namespace}-outage-momentary-${Region}'
+      - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      Tags: 
+        - Key: Name
+          Value: !Sub
+          - '${Stage}-${Namespace}-outage-momentary-${Region}'
+          - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration: !If
+        - CreateProdResources
+        - Status: Enabled
+        - !Ref 'AWS::NoValue'
+  OutageSMSContentBucket:
+    # DependsOn: OutageSMSContentBucketPermission
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub
+      - '${Stage}-${Namespace}-outage-sms-content-${Region}'
+      - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      Tags: 
+        - Key: Name
+          Value: !Sub
+          - '${Stage}-${Namespace}-outage-sms-content-${Region}'
+          - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration: !If
+        - CreateProdResources
+        - Status: Enabled
+        - !Ref 'AWS::NoValue'
+  #     NotificationConfiguration:
+  #       LambdaConfigurations:
+  #       - Event: 's3:ObjectCreated:*'
+  #         Function: !GetAtt SMSSenderFunction.Arn
+  # OutageSMSContentBucketPermission:
+  #   Type: AWS::Lambda::Permission
+  #   Properties:
+  #     Action: 'lambda:InvokeFunction'
+  #     FunctionName: !Ref SMSSenderFunction
+  #     Principal: s3.amazonaws.com
+  #     SourceAccount: !Ref "AWS::AccountId"
+  #     SourceArn: !Sub 
+  #     - "arn:aws:s3:::${Stage}-${Namespace}-outage-sms-content-${Region}"
+  #     - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+  OutageEmailContentBucket:
+    # DependsOn: OutageEmailContentBucketPermission
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub
+      - '${Stage}-${Namespace}-outage-email-content-${Region}'
+      - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      Tags: 
+        - Key: Name
+          Value: !Sub
+          - '${Stage}-${Namespace}-outage-email-content-${Region}'
+          - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration: !If
+        - CreateProdResources
+        - Status: Enabled
+        - !Ref 'AWS::NoValue'
+  #     NotificationConfiguration:
+  #       LambdaConfigurations:
+  #       - Event: 's3:ObjectCreated:*'
+  #         Function: !GetAtt EmailSenderFunction.Arn
+  # OutageEmailContentBucketPermission:
+  #   Type: AWS::Lambda::Permission
+  #   Properties:
+  #     Action: 'lambda:InvokeFunction'
+  #     FunctionName: !Ref EmailSenderFunction
+  #     Principal: s3.amazonaws.com
+  #     SourceAccount: !Ref "AWS::AccountId"
+  #     SourceArn: !Sub 
+  #     - "arn:aws:s3:::${Stage}-${Namespace}-outage-email-content-${Region}"
+  #     - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+  NotificationMessageHistoryBucket:    
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub
+      - '${Stage}-${Namespace}-notification-message-history-per-premise-${Region}'
+      - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      Tags: 
+        - Key: Name
+          Value: !Sub
+          - '${Stage}-${Namespace}-notification-message-history-per-premise-${Region}'
+          - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration: !If
+        - CreateProdResources
+        - Status: Enabled
+        - !Ref 'AWS::NoValue'     
+  OutageHistoryContentBucket:
+    # DependsOn: OutageHistoryContentBucketPermission
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub
+      - '${Stage}-${Namespace}-outage-history-content-${Region}'
+      - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      Tags: 
+        - Key: Name
+          Value: !Sub
+          - '${Stage}-${Namespace}-outage-history-content-${Region}'
+          - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration: !If
+        - CreateProdResources
+        - Status: Enabled
+        - !Ref 'AWS::NoValue'
+      # NotificationConfiguration:
+      #   LambdaConfigurations:
+      #   - Event: 's3:ObjectCreated:*'
+      #     Function: !GetAtt HistoryNotificationSender.Arn
+  # OutageHistoryContentBucketPermission:
+  #   Type: AWS::Lambda::Permission
+  #   Properties:
+  #     Action: 'lambda:InvokeFunction'
+  #     FunctionName: !Ref HistoryNotificationSender
+  #     Principal: s3.amazonaws.com
+  #     SourceAccount: !Ref "AWS::AccountId"
+  #     SourceArn: !Sub 
+  #     - "arn:aws:s3:::${Stage}-${Namespace}-outage-history-content-${Region}"
+  #     - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+  NotificationSMSPerPremiseBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub
+      - '${Stage}-${Namespace}-notification-sms-per-premise-${Region}'
+      - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      Tags: 
+        - Key: Name
+          Value: !Sub
+          - '${Stage}-${Namespace}-notification-sms-per-premise-${Region}'
+          - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration: !If
+        - CreateProdResources
+        - Status: Enabled
+        - !Ref 'AWS::NoValue'
+  NotificationEmailPerPremiseBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub
+      - '${Stage}-${Namespace}-notification-email-per-premise-${Region}'
+      - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      Tags: 
+        - Key: Name
+          Value: !Sub
+          - '${Stage}-${Namespace}-notification-email-per-premise-${Region}'
+          - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration: !If
+        - CreateProdResources
+        - Status: Enabled
+        - !Ref 'AWS::NoValue'
+  OutageExceptionBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub
+      - '${Stage}-${Namespace}-outage-exception-${Region}'
+      - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      Tags: 
+        - Key: Name
+          Value: !Sub
+          - '${Stage}-${Namespace}-outage-exception-${Region}'
+          - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration: !If
+        - CreateProdResources
+        - Status: Enabled
+        - !Ref 'AWS::NoValue'
+  OutageBatchStatisticsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub
+      - '${Stage}-${Namespace}-outage-batch-statistics-${Region}'
+      - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      Tags: 
+        - Key: Name
+          Value: !Sub
+          - '${Stage}-${Namespace}-outage-batch-statistics-${Region}'
+          - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration: !If
+        - CreateProdResources
+        - Status: Enabled
+        - !Ref 'AWS::NoValue'
+  PreferencesRawBucket:
+    # DependsOn: PreferencesRawBucketPermission
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub
+      - '${Stage}-${Namespace}-preferences-raw-${Region}'
+      - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      Tags: 
+        - Key: Name
+          Value: !Sub
+          - '${Stage}-${Namespace}-preferences-raw-${Region}'
+          - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration: !If
+        - CreateProdResources
+        - Status: Enabled
+        - !Ref 'AWS::NoValue'
+      # NotificationConfiguration:
+      #   LambdaConfigurations:
+      #   - Event: 's3:ObjectCreated:*'
+      #     Function: !GetAtt ProcessPreferencesFunction.Arn
+  # PreferencesRawBucketPermission:
+  #   Type: AWS::Lambda::Permission
+  #   Properties:
+  #     Action: 'lambda:InvokeFunction'
+  #     FunctionName: !Ref ProcessPreferencesFunction
+  #     Principal: s3.amazonaws.com
+  #     SourceAccount: !Ref "AWS::AccountId"
+  #     SourceArn: !Sub 
+  #     - "arn:aws:s3:::${Stage}-${Namespace}-preferences-raw-${Region}"
+  #     - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+  NotApplicableReasonBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub
+      - '${Stage}-${Namespace}-not-applicable-reason-${Region}'
+      - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      Tags: 
+        - Key: Name
+          Value: !Sub
+          - '${Stage}-${Namespace}-not-applicable-reason-${Region}'
+          - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration: !If
+        - CreateProdResources
+        - Status: Enabled
+        - !Ref 'AWS::NoValue'
+  DestroyedMomentaryBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub
+      - '${Stage}-${Namespace}-destroyed-momentary-${Region}'
+      - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      Tags: 
+        - Key: Name
+          Value: !Sub
+          - '${Stage}-${Namespace}-destroyed-momentary-${Region}'
+          - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration: !If
+        - CreateProdResources
+        - Status: Enabled
+        - !Ref 'AWS::NoValue'        
+  NoSubscriptionsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub
+      - '${Stage}-${Namespace}-no-subscriptions-${Region}'
+      - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      Tags: 
+        - Key: Name
+          Value: !Sub
+          - '${Stage}-${Namespace}-no-subscriptions-${Region}'
+          - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration: !If
+        - CreateProdResources
+        - Status: Enabled
+        - !Ref 'AWS::NoValue'
+
+  # -----------------------------------------------------------------------------------
+  # The LAMBDA functions start here!!!
+  # -----------------------------------------------------------------------------------
+
+  outagesAPIGateway:
+    Type: "AWS::ApiGateway::RestApi"
+    Properties:
+      Name: !Sub 'outage-${Namespace}-API'
+      Description: API for all outage alert
+  outageAPIGatewayRootMethod:
+    Type: "AWS::ApiGateway::Method"
+    Properties:
+      ApiKeyRequired: 'true'
+      AuthorizationType: "NONE"
+      HttpMethod: "POST"
+      Integration:
+        Credentials: !Sub 'arn:aws:iam::${AWS::AccountId}:role/CloudAPIGateway'
+        IntegrationHttpMethod: "POST"
+        Type: "AWS"
+        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${Namespace}-outage-batch-landing/invocations"
+        IntegrationResponses:
+          - StatusCode: 200
+      MethodResponses:
+      - ResponseModels: 
+          application/json: Empty
+        StatusCode: 200
+      ResourceId: !GetAtt "outagesAPIGateway.RootResourceId"
+      RestApiId: !Ref "outagesAPIGateway"
+  outageAPIGatewayDeployment:
+    Type: "AWS::ApiGateway::Deployment"
+    DependsOn:
+      - "outageAPIGatewayRootMethod"
+    Properties:
+      RestApiId: !Ref "outagesAPIGateway"
+  outageDevStage:
+    Type: AWS::ApiGateway::Stage
+    Properties:
+      StageName: !Ref Stage
+      Description: !Ref Stage
+      RestApiId: !Ref outagesAPIGateway
+      DeploymentId: !Ref outageAPIGatewayDeployment
+  outageApiKey:
+    Type: 'AWS::ApiGateway::ApiKey'
+    DependsOn:
+      - outageAPIGatewayDeployment
+      - outageDevStage
+    Properties:
+      Description: CloudFormation API Key V1
+      Enabled: 'true'
+      StageKeys:
+        - RestApiId: !Ref outagesAPIGateway
+          StageName: !Ref Stage
+  outageUsagePlan:
+    Type: 'AWS::ApiGateway::UsagePlan'
+    Properties:
+      ApiStages:
+        - ApiId: !Ref outagesAPIGateway
+          Stage: !Ref outageDevStage
+      Description: Dev usage plan to tie to Key
+      # Quota:
+      #   Limit: 5000
+      #   Period: MONTH
+      # Throttle:
+      #   BurstLimit: 200
+      #   RateLimit: 100
+      # UsagePlanName: Plan_ABC
+  outageUsagePlanKey:
+    Type: 'AWS::ApiGateway::UsagePlanKey'
+    Properties:
+      KeyId: !Ref outageApiKey
+      KeyType: API_KEY
+      UsagePlanId: !Ref outageUsagePlan
+  
+  preferencesAPIGateway:
+    Type: "AWS::ApiGateway::RestApi"
+    Properties:
+      Name: !Sub 'preferences-${Namespace}-API'
+      Description: API for all outage alert
+  preferencesAPIGatewayRootMethod:
+    Type: "AWS::ApiGateway::Method"
+    Properties:
+      ApiKeyRequired: 'true'
+      AuthorizationType: "NONE"
+      HttpMethod: "POST"
+      Integration:
+        Credentials: !Sub 'arn:aws:iam::${AWS::AccountId}:role/CloudAPIGateway'
+        IntegrationHttpMethod: "POST"
+        Type: "AWS"
+        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${Namespace}-preferences-batch-landing/invocations"
+        IntegrationResponses:
+          - StatusCode: 200
+      ResourceId: !GetAtt "preferencesAPIGateway.RootResourceId"
+      RestApiId: !Ref "preferencesAPIGateway"
+      MethodResponses:
+      - ResponseModels: 
+          application/json: Empty
+        StatusCode: 200
+  preferencesAPIGatewayDeployment:
+    Type: "AWS::ApiGateway::Deployment"
+    DependsOn:
+      - "preferencesAPIGatewayRootMethod"
+    Properties:
+      RestApiId: !Ref "preferencesAPIGateway"
+  preferencesDevStage:
+    Type: AWS::ApiGateway::Stage
+    Properties:
+      StageName: !Ref Stage
+      Description: !Ref Stage
+      RestApiId: !Ref preferencesAPIGateway
+      DeploymentId: !Ref preferencesAPIGatewayDeployment
+  preferencesApiKey:
+    Type: 'AWS::ApiGateway::ApiKey'
+    DependsOn:
+      - preferencesAPIGatewayDeployment
+      - preferencesDevStage
+    Properties:
+      Description: CloudFormation API Key V1
+      Enabled: 'true'
+      StageKeys:
+        - RestApiId: !Ref preferencesAPIGateway
+          StageName: !Ref Stage
+  preferencesUsagePlan:
+    Type: 'AWS::ApiGateway::UsagePlan'
+    Properties:
+      ApiStages:
+        - ApiId: !Ref preferencesAPIGateway
+          Stage: !Ref preferencesDevStage
+      Description: Dev usage plan to tie to Key
+  preferencesUsagePlanKey:
+    Type: 'AWS::ApiGateway::UsagePlanKey'
+    Properties:
+      KeyId: !Ref preferencesApiKey
+      KeyType: API_KEY
+      UsagePlanId: !Ref preferencesUsagePlan
+  
+  
+  billingAPIGateway:
+    Type: "AWS::ApiGateway::RestApi"
+    Properties:
+      Name: !Sub 'billing-${Namespace}-API'
+      Description: API for all incoming alerts from MACSS
+  billingAPIGatewayPreferencesResource:
+    Type: 'AWS::ApiGateway::Resource'
+    Properties:
+      RestApiId: !Ref billingAPIGateway
+      ParentId: !GetAtt billingAPIGateway.RootResourceId
+      PathPart: preferences
+  billingAPIGatewayPreferencesMethod:
+    Type: "AWS::ApiGateway::Method"
+    Properties:
+      ApiKeyRequired: 'true'
+      AuthorizationType: "NONE"
+      HttpMethod: "POST"
+      Integration:
+        Credentials: !Sub 'arn:aws:iam::${AWS::AccountId}:role/CloudAPIGateway'
+        IntegrationHttpMethod: "POST"
+        Type: "AWS"
+        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${Namespace}-preferences-batch-landing/invocations"
+        IntegrationResponses:
+          - StatusCode: 200
+      ResourceId: !Ref billingAPIGatewayPreferencesResource
+      RestApiId: !Ref "billingAPIGateway"
+      MethodResponses:
+      - ResponseModels: 
+          application/json: Empty
+        StatusCode: 200
+  billingAPIGatewayBillingResource:
+    Type: 'AWS::ApiGateway::Resource'
+    Properties:
+      RestApiId: !Ref billingAPIGateway
+      ParentId: !GetAtt billingAPIGateway.RootResourceId
+      PathPart: billing
+  billingAPIGatewayBillingMethod:
+    Type: "AWS::ApiGateway::Method"
+    Properties:
+      ApiKeyRequired: 'true'
+      AuthorizationType: "NONE"
+      HttpMethod: "POST"
+      Integration:
+        Credentials: !Sub 'arn:aws:iam::${AWS::AccountId}:role/CloudAPIGateway'
+        IntegrationHttpMethod: "POST"
+        Type: "AWS"
+        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${Namespace}-billing-batch-landing/invocations"
+        IntegrationResponses:
+          - StatusCode: 200
+        PassthroughBehavior: WHEN_NO_TEMPLATES
+        RequestTemplates:
+          application/json: "##  See http://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-mapping-template-reference.html\n##  This template will pass through all parameters including path, querystring, header, stage variables, and context through to the integration endpoint via the body/payload\n#set($allParams = $input.params())\n{\n\"body-json\" : $input.json('$'),\n\"params\" : {\n#foreach($type in $allParams.keySet())\n    #set($params = $allParams.get($type))\n\"$type\" : {\n    #foreach($paramName in $params.keySet())\n    \"$paramName\" : \"$util.escapeJavaScript($params.get($paramName))\"\n        #if($foreach.hasNext),#end\n    #end\n}\n    #if($foreach.hasNext),#end\n#end\n},\n\"stage-variables\" : {\n#foreach($key in $stageVariables.keySet())\n\"$key\" : \"$util.escapeJavaScript($stageVariables.get($key))\"\n    #if($foreach.hasNext),#end\n#end\n},\n\"context\" : {\n    \"account-id\" : \"$context.identity.accountId\",\n    \"api-id\" : \"$context.apiId\",\n    \"api-key\" : \"$context.identity.apiKey\",\n    \"authorizer-principal-id\" : \"$context.authorizer.principalId\",\n    \"caller\" : \"$context.identity.caller\",\n    \"cognito-authentication-provider\" : \"$context.identity.cognitoAuthenticationProvider\",\n    \"cognito-authentication-type\" : \"$context.identity.cognitoAuthenticationType\",\n    \"cognito-identity-id\" : \"$context.identity.cognitoIdentityId\",\n    \"cognito-identity-pool-id\" : \"$context.identity.cognitoIdentityPoolId\",\n    \"http-method\" : \"$context.httpMethod\",\n    \"stage\" : \"$context.stage\",\n    \"source-ip\" : \"$context.identity.sourceIp\",\n    \"user\" : \"$context.identity.user\",\n    \"user-agent\" : \"$context.identity.userAgent\",\n    \"user-arn\" : \"$context.identity.userArn\",\n    \"request-id\" : \"$context.requestId\",\n    \"resource-id\" : \"$context.resourceId\",\n    \"resource-path\" : \"$context.resourcePath\"\n    }\n}\n"
+      ResourceId: !Ref billingAPIGatewayBillingResource
+      RestApiId: !Ref "billingAPIGateway"
+      MethodResponses:
+      - ResponseModels: 
+          application/json: Empty
+        StatusCode: 200
+  billingAPIGatewayDeployment:
+    Type: "AWS::ApiGateway::Deployment"
+    DependsOn:
+      - "billingAPIGatewayPreferencesMethod"
+      - "billingAPIGatewayBillingMethod"
+    Properties:
+      RestApiId: !Ref "billingAPIGateway"
+  billingDevStage:
+    Type: AWS::ApiGateway::Stage
+    Properties:
+      StageName: !Ref Stage
+      Description: !Ref Stage
+      RestApiId: !Ref billingAPIGateway
+      DeploymentId: !Ref billingAPIGatewayDeployment
+  billingApiKey:
+    Type: 'AWS::ApiGateway::ApiKey'
+    DependsOn:
+      - billingAPIGatewayDeployment
+      - billingDevStage
+    Properties:
+      Description: CloudFormation API Key V1
+      Enabled: 'true'
+      StageKeys:
+        - RestApiId: !Ref billingAPIGateway
+          StageName: !Ref Stage
+  billingUsagePlan:
+    Type: 'AWS::ApiGateway::UsagePlan'
+    Properties:
+      ApiStages:
+        - ApiId: !Ref billingAPIGateway
+          Stage: !Ref billingDevStage
+      Description: Dev usage plan to tie to Key
+  billingUsagePlanKey:
+    Type: 'AWS::ApiGateway::UsagePlanKey'
+    Properties:
+      KeyId: !Ref billingApiKey
+      KeyType: API_KEY
+      UsagePlanId: !Ref billingUsagePlan
+  # ProcessBatchOutagesFunction:
+  #   Type: AWS::Lambda::Function
+  #   Properties:
+  #     Code: cx-outage-alerts/target/cx-outage-alerts.jar
+  #     FunctionName: !Sub '${Namespace}-outage-batch-landing'
+  #     Handler: com.aep.cx.outage.alerts.aws.request.handlers.ProcessBatchOutages::handleRequest
+  #     Role: !Sub 'arn:aws:iam::${AWS::AccountId}:role/CloudAutomation'
+  #     Timeout: 360
+  #     Runtime: java8
+  #     MemorySize: 512
+  #     Tags: 
+  #       - Key: Name
+  #         Value: !Sub '${Namespace}-outage-batch-landing'
+  #     Environment:
+  #       Variables:
+  #         OUTAGE_RAW_BUCKET: !Sub
+  #           - '${Stage}-${Namespace}-outage-raw-${Region}'
+  #           - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+  # ProcessOutagesFunction:
+  #   Type: AWS::Lambda::Function
+  #   Properties:
+  #     Code: cx-outage-alerts/target/cx-outage-alerts.jar
+  #     FunctionName: !Sub '${Namespace}-outage-batch-processor'
+  #     Handler: com.aep.cx.outage.alerts.aws.request.handlers.ProcessOutages::handleRequest
+  #     Role: !Sub 'arn:aws:iam::${AWS::AccountId}:role/CloudAutomation'
+  #     Timeout: 600
+  #     Runtime: java8
+  #     MemorySize: 512
+  #     Tags: 
+  #       - Key: Name
+  #         Value: !Sub '${Namespace}-outage-batch-processor'
+  #     Environment:
+  #       Variables:
+  #         OUTAGE_SUSTAINED_BUCKET: !Sub
+  #           - ${Stage}-${Namespace}-outage-sustained-${Region}
+  #           - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+  #         OUTAGE_MOMENTARY_BUCKET: !Sub
+  #           - '${Stage}-${Namespace}-outage-momentary-${Region}'
+  #           - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+  #         OUTAGE_RESTORED_BUCKET: !Sub
+  #           - ${Stage}-${Namespace}-outage-restored-${Region}
+  #           - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+  #         OUTAGE_BATCH_STATISTICS_BUCKET: !Sub
+  #           - ${Stage}-${Namespace}-outage-batch-statistics-${Region}
+  #           - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+  #         MOMENTARY_WAIT_THRESHOLD_IN_MINUTES: '10'
+  # LandingPreferencesFunction:
+  #   Type: AWS::Lambda::Function
+  #   Properties:
+  #     Code: cx-utils/target/cx-utils.jar
+  #     FunctionName: !Sub '${Namespace}-preferences-batch-landing'
+  #     Handler: com.aep.cx.utils.alerts.aws.request.handlers.LoadPreferences2S3Handler::handleRequest
+  #     Role: !Sub 'arn:aws:iam::${AWS::AccountId}:role/CloudAutomation'
+  #     Timeout: 180
+  #     Runtime: java8
+  #     MemorySize: 512
+  #     Tags: 
+  #       - Key: Name
+  #         Value: !Sub '${Namespace}-preferences-batch-landing'
+  #     Environment:
+  #       Variables:
+  #         PREFERENCES_RAW_BUCKET: !Sub
+  #           - ${Stage}-${Namespace}-preferences-raw-${Region}
+  #           - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+  # ProcessPreferencesFunction:
+  #   Type: AWS::Lambda::Function
+  #   Properties:
+  #     Code: cx-utils/target/cx-utils.jar
+  #     FunctionName: !Sub '${Namespace}-preferences-batch-processor'
+  #     Handler: com.aep.cx.utils.alerts.aws.request.handlers.Preferences2DynamoDBHandler::handleRequest
+  #     Role: !Sub 'arn:aws:iam::${AWS::AccountId}:role/CloudAutomation'
+  #     Timeout: 300
+  #     Runtime: java8
+  #     MemorySize: 512
+  #     Tags: 
+  #       - Key: Name
+  #         Value: !Sub '${Namespace}-preferences-batch-processor'
+  #     Environment:
+  #       Variables:
+  #         OUTAGE_PREFERENCES_DYNAMODBTABLE: !Sub '${Stage}_${Namespace}_customer_outage_preferences'
+  # BuildSustainedNotificationsFunction:
+  #   Type: AWS::Lambda::Function
+  #   Properties:
+  #     Code: cx-outage-alerts/target/cx-outage-alerts.jar
+  #     FunctionName: !Sub '${Namespace}-notification-sustained-content-builder'
+  #     Handler: com.aep.cx.outage.alerts.aws.request.handlers.ProcessSustainedOutages::handleRequest
+  #     Role: !Sub 'arn:aws:iam::${AWS::AccountId}:role/CloudAutomation'
+  #     Timeout: 180
+  #     Runtime: java8
+  #     MemorySize: 512
+  #     Tags: 
+  #       - Key: Name
+  #         Value: !Sub '${Namespace}-notification-sustained-content-builder'
+  #     Environment:
+  #       Variables:
+  #         NOTIFICATION_EMAIL_BUCKET: !Sub
+  #           - ${Stage}-${Namespace}-notification-email-per-premise-${Region}
+  #           - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+  #         NOTIFICATION_SMS_BUCKET: !Sub
+  #           - ${Stage}-${Namespace}-notification-sms-per-premise-${Region}
+  #           - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+  #         NOTIFICATION_MESSAGE_HISTORY_BUCKET: !Sub
+  #           - '${Stage}-${Namespace}-notification-message-history-per-premise-${Region}'
+  #           - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+  #         OUTAGE_PREFERENCES_DYNAMODBTABLE: !Sub '${Stage}_${Namespace}_customer_outage_preferences'
+  #         NO_PREFERENCES: !Sub
+  #           - '${Stage}-${Namespace}-no-subscriptions-${Region}'
+  #           - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+  #         NOTIFICATION_FAILED_SUSTAINED_BUCKET: !Sub
+  #           - ${Stage}-${Namespace}-outage-failed-sustained-${Region}
+  #           - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+  # BuildRestoredNotificationsFunction:
+  #   Type: AWS::Lambda::Function
+  #   Properties:
+  #     Code: cx-outage-alerts/target/cx-outage-alerts.jar
+  #     FunctionName: !Sub '${Namespace}-notification-restored-content-builder'
+  #     Handler: com.aep.cx.outage.alerts.aws.request.handlers.ProcessRestoredOutages::handleRequest
+  #     Role: !Sub 'arn:aws:iam::${AWS::AccountId}:role/CloudAutomation'
+  #     Timeout: 180
+  #     Runtime: java8
+  #     MemorySize: 512
+  #     Tags: 
+  #       - Key: Name
+  #         Value: !Sub '${Namespace}-notification-restored-content-builder'
+  #     Environment:
+  #       Variables:
+  #         NOTIFICATION_EMAIL_BUCKET: !Sub
+  #           - ${Stage}-${Namespace}-notification-email-per-premise-${Region}
+  #           - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+  #         NOTIFICATION_SMS_BUCKET: !Sub
+  #           - ${Stage}-${Namespace}-notification-sms-per-premise-${Region}
+  #           - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+  #         NOTIFICATION_MESSAGE_HISTORY_BUCKET: !Sub
+  #           - '${Stage}-${Namespace}-notification-message-history-per-premise-${Region}'
+  #           - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+  #         OUTAGE_PREFERENCES_DYNAMODBTABLE: !Sub '${Stage}_${Namespace}_customer_outage_preferences'
+  #         NO_PREFERENCES: !Sub
+  #           - '${Stage}-${Namespace}-no-subscriptions-${Region}'
+  #           - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+  #         NOTIFICATION_FAILED_RESTORED_BUCKET: !Sub
+  #           - ${Stage}-${Namespace}-outage-failed-restored-${Region}
+  #           - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]  
+  # ProcessMomentaryFunction:
+  #   Type: AWS::Lambda::Function
+  #   Properties:
+  #     Code: cx-outage-alerts/target/cx-outage-alerts.jar
+  #     FunctionName: !Sub '${Namespace}-momentary-outages-processor'
+  #     Handler: com.aep.cx.outage.alerts.aws.request.handlers.MomentaryProcessor::handleRequest
+  #     Role: !Sub 'arn:aws:iam::${AWS::AccountId}:role/CloudAutomation'
+  #     Timeout: 180
+  #     Runtime: java8
+  #     MemorySize: 512
+  #     Tags: 
+  #       - Key: Name
+  #         Value: !Sub '${Namespace}-momentary-outages-processor'
+  #     Environment:
+  #       Variables:
+  #         OUTAGE_SUSTAINED_BUCKET: !Sub
+  #           - ${Stage}-${Namespace}-outage-sustained-${Region}
+  #           - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+  #         OUTAGE_MOMENTARY_BUCKET: !Sub
+  #           - '${Stage}-${Namespace}-outage-momentary-${Region}'
+  #           - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+  # EmailSenderFunction:
+  #   Type: AWS::Lambda::Function
+  #   Properties:
+  #     Code: cx-utils/target/cx-utils.jar
+  #     FunctionName: !Sub '${Namespace}-outage-email-notification-sender'
+  #     Handler: com.aep.cx.utils.alerts.aws.request.handlers.SendEmailNotificationsHandler::handleRequest
+  #     Role: !Sub 'arn:aws:iam::${AWS::AccountId}:role/CloudAutomation'
+  #     Timeout: 180
+  #     Runtime: java8
+  #     MemorySize: 512
+  #     Tags: 
+  #       - Key: Name
+  #         Value: !Sub '${Namespace}-outage-email-notification-sender'
+  #     Environment:
+  #       Variables:
+  #         DELIVERY_TYPE_EMAIL: EMAIL-DELIVERY
+  #     VpcConfig:
+  #       SecurityGroupIds: !FindInMap [Environment, !Ref Stage, SGs]
+  #       SubnetIds: !FindInMap [Environment, !Ref Stage, Subnets]
+  # SMSSenderFunction:
+  #   Type: AWS::Lambda::Function
+  #   Properties:
+  #     Code: cx-utils/target/cx-utils.jar
+  #     FunctionName: !Sub '${Namespace}-outage-sms-notification-sender'
+  #     Handler: com.aep.cx.utils.alerts.aws.request.handlers.SendSMSNotificationsHandler::handleRequest
+  #     Role: !Sub 'arn:aws:iam::${AWS::AccountId}:role/CloudAutomation'
+  #     Timeout: 180
+  #     Runtime: java8
+  #     MemorySize: 512
+  #     Tags: 
+  #       - Key: Name
+  #         Value: !Sub '${Namespace}-outage-sms-notification-sender'
+  #     Environment:
+  #       Variables:
+  #         DELIVERY_TYPE_SMS: TEXT-DELIVERY
+  #       #  MACSS_WS_USER: !FindInMap [Environment, !Ref Stage, MacssWsUser]
+  #       #  MACSS_URL: !FindInMap [Environment, !Ref Stage, MacssURL]
+  #       #  MACSS_WS_PASSWORD: !Ref 'MacssWsPassword'
+  #     VpcConfig:
+  #       SecurityGroupIds: !FindInMap [Environment, !Ref Stage, SGs]
+  #       SubnetIds: !FindInMap [Environment, !Ref Stage, Subnets] 
+  # EmailBatcherFunction:
+  #   Type: AWS::Lambda::Function
+  #   Properties:
+  #     Code: cx-outage-alerts/target/cx-outage-alerts.jar
+  #     FunctionName: !Sub '${Namespace}-outage-email-notifications-batcher'
+  #     Handler: com.aep.cx.outage.alerts.aws.request.handlers.BatchEmailNotifications::handleRequest
+  #     Role: !Sub 'arn:aws:iam::${AWS::AccountId}:role/CloudAutomation'
+  #     Timeout: 600
+  #     Runtime: java8
+  #     MemorySize: 512
+  #     Tags: 
+  #       - Key: Name
+  #         Value: !Sub '${Namespace}-outage-email-notifications-batcher'
+  #     Environment:
+  #       Variables:
+  #         NOTIFICATION_BATCH_SIZE: '500'
+  #         NOTIFICATION_EMAIL_BUCKET: !Sub
+  #           - ${Stage}-${Namespace}-notification-email-per-premise-${Region}
+  #           - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+  #         NOTIFICATION_EMAIL_BATCHED_BUCKET: !Sub
+  #           - ${Stage}-${Namespace}-outage-email-content-${Region}
+  #           - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+  # # EmailBatcherFunctionScheduledEventTrigger:
+  #   # Type: AWS::Events::Rule
+  #   # Properties:
+  #     # ScheduleExpression: rate(1 minute)
+  #     # Targets:
+  #       # - Id: EmailBatcherFunctionScheduledEventTriggerLambdaTarget
+  #         # Arn: !GetAtt 'EmailBatcherFunction.Arn'
+  # # EmailBatcherFunctionScheduledEventTriggerPermission:
+  #   # Type: AWS::Lambda::Permission
+  #   # Properties:
+  #     # Action: lambda:invokeFunction
+  #     # Principal: events.amazonaws.com
+  #     # FunctionName: !Ref 'EmailBatcherFunction'
+  #     # SourceArn: !GetAtt 'EmailBatcherFunctionScheduledEventTrigger.Arn'
+  # SMSBatcherFunction:
+  #   Type: AWS::Lambda::Function
+  #   Properties:
+  #     Code: cx-outage-alerts/target/cx-outage-alerts.jar
+  #     FunctionName: !Sub '${Namespace}-outage-sms-notifications-batcher'
+  #     Handler: com.aep.cx.outage.alerts.aws.request.handlers.BatchSMSNotifications::handleRequest
+  #     Role: !Sub 'arn:aws:iam::${AWS::AccountId}:role/CloudAutomation'
+  #     Timeout: 600
+  #     Runtime: java8
+  #     MemorySize: 512
+  #     Tags: 
+  #       - Key: Name
+  #         Value: !Sub '${Namespace}-outage-sms-notifications-batcher'
+  #     Environment:
+  #       Variables:
+  #         NOTIFICATION_BATCH_SIZE: '500'
+  #         NOTIFICATION_SMS_BATCHED_BUCKET: !Sub
+  #           - ${Stage}-${Namespace}-outage-sms-content-${Region}
+  #           - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+  #         NOTIFICATION_SMS_BUCKET: !Sub
+  #           - ${Stage}-${Namespace}-notification-sms-per-premise-${Region}
+  #           - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+  # # SMSBatcherFunctionScheduledEventTrigger:
+  #   # Type: AWS::Events::Rule
+  #   # Properties:
+  #     # ScheduleExpression: rate(1 minute)
+  #     # Targets:
+  #       # - Id: SMSBatcherFunctionScheduledEventTriggerLambdaTarget
+  #         # Arn: !GetAtt 'SMSBatcherFunction.Arn'
+  # # SMSBatcherFunctionScheduledEventTriggerPermission:
+  #   # Type: AWS::Lambda::Permission
+  #   # Properties:
+  #     # Action: lambda:invokeFunction
+  #     # Principal: events.amazonaws.com
+  #     # FunctionName: !Ref 'SMSBatcherFunction'
+  #     # SourceArn: !GetAtt 'SMSBatcherFunctionScheduledEventTrigger.Arn'
+  # HistoryNotificationSender:
+  #   Type: AWS::Lambda::Function
+  #   Properties:
+  #     Code: cx-utils/target/cx-utils.jar
+  #     FunctionName: !Sub '${Namespace}-outage-message-history-notification-sender'
+  #     Handler: com.aep.cx.utils.alerts.aws.request.handlers.SendMessageHistoryHandler::handleRequest
+  #     Role: !Sub 'arn:aws:iam::${AWS::AccountId}:role/CloudAutomation'
+  #     Timeout: 180
+  #     Runtime: java8
+  #     MemorySize: 512
+  #     Tags: 
+  #       - Key: Name
+  #         Value: !Sub '${Namespace}-outage-message-history-notification-sender'
+  #     Environment:
+  #       Variables:
+  #         DELIVERY_TYPE_MACSS_HISTORY: MACSS-HISTORY
+  #     VpcConfig:
+  #       SecurityGroupIds: !FindInMap [Environment, !Ref Stage, SGs]
+  #       SubnetIds: !FindInMap [Environment, !Ref Stage, Subnets]
+  # HistoryNotificationBatcher:
+  #   Type: AWS::Lambda::Function
+  #   Properties:
+  #     Code: cx-outage-alerts/target/cx-outage-alerts.jar
+  #     FunctionName: !Sub '${Namespace}-outage-message-history-notifications-batcher'
+  #     Handler: com.aep.cx.outage.alerts.aws.request.handlers.BatchMessageHistoryNotifications::handleRequest
+  #     Role: !Sub 'arn:aws:iam::${AWS::AccountId}:role/CloudAutomation'
+  #     Timeout: 600
+  #     Runtime: java8
+  #     MemorySize: 512
+  #     Tags: 
+  #       - Key: Name
+  #         Value: !Sub '${Namespace}-outage-message-history-notifications-batcher'
+  #     Environment:
+  #       Variables:
+  #         NOTIFICATION_BATCH_SIZE: '500'
+  #         NOTIFICATION_MESSAGE_HISTORY_BUCKET: !Sub
+  #           - '${Stage}-${Namespace}-notification-message-history-per-premise-${Region}'
+  #           - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+  #         NOTIFICATION_MESSAGE_HISTORY_BATCHED_BUCKET: !Sub
+  #           - '${Stage}-${Namespace}-outage-history-content-${Region}'
+  #           - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+
+  # MomentaryWrapperFunction:
+  #   Type: AWS::Lambda::Function
+  #   Properties:
+  #     Code: cx-utils/target/cx-utils.jar
+  #     FunctionName: !Sub '${Namespace}-momentary-outages-wrapper'
+  #     Handler: com.aep.cx.utils.alerts.aws.request.handlers.FetchListOfKeysFromS3Wrapper::handleRequest
+  #     Role: !Sub 'arn:aws:iam::${AWS::AccountId}:role/CloudAutomation'
+  #     Timeout: 180
+  #     Runtime: java8
+  #     MemorySize: 512
+  #     Tags: 
+  #       - Key: Name
+  #         Value: !Sub '${Namespace}-momentary-outages-wrapper'
+  #     Environment:
+  #       Variables:
+  #         OUTAGE_SUSTAINED_BUCKET: !Sub
+  #           - ${Stage}-${Namespace}-outage-sustained-${Region}
+  #           - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+  #         OUTAGE_MOMENTARY_BUCKET: !Sub
+  #           - '${Stage}-${Namespace}-outage-momentary-${Region}'
+  #           - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+  #         BUCKET_NM_TO_FETCH_KEYS: !Sub
+  #           - '${Stage}-${Namespace}-outage-momentary-${Region}'
+  #           - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+  #         LAMBDA_TO_INVOKE: !Sub '${Namespace}-momentary-outages-processor'
+  # MomentaryWrapperFunctionScheduledEventTrigger:
+  #   Type: AWS::Events::Rule
+  #   Properties:
+  #     ScheduleExpression: rate(1 minute)
+  #     Targets:
+  #       - Id: MomentaryWrapperFunctionScheduledEventTriggerLambdaTarget
+  #         Arn: !GetAtt 'MomentaryWrapperFunction.Arn'
+  # MomentaryWrapperFunctionScheduledEventTriggerPermission:
+  #   Type: AWS::Lambda::Permission
+  #   Properties:
+  #     Action: lambda:invokeFunction
+  #     Principal: events.amazonaws.com
+  #     FunctionName: !Ref 'MomentaryWrapperFunction'
+  #     SourceArn: !GetAtt 'MomentaryWrapperFunctionScheduledEventTrigger.Arn'
+  # EmailOutagesWrapperFunction:
+  #   Type: AWS::Lambda::Function
+  #   Properties:
+  #     Code: cx-utils/target/cx-utils.jar
+  #     FunctionName: !Sub '${Namespace}-email-outages-wrapper'
+  #     Handler: com.aep.cx.utils.alerts.aws.request.handlers.FetchListOfKeysFromS3Wrapper::handleRequest
+  #     Role: !Sub 'arn:aws:iam::${AWS::AccountId}:role/CloudAutomation'
+  #     Timeout: 180
+  #     Runtime: java8
+  #     MemorySize: 512
+  #     Tags: 
+  #       - Key: Name
+  #         Value: !Sub '${Namespace}-email-outages-wrapper'
+  #     Environment:
+  #       Variables:
+  #         OUTAGE_SUSTAINED_BUCKET: !Sub
+  #           - ${Stage}-${Namespace}-outage-sustained-${Region}
+  #           - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+  #         OUTAGE_MOMENTARY_BUCKET: !Sub
+  #           - '${Stage}-${Namespace}-outage-momentary-${Region}'
+  #           - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+  #         BUCKET_NM_TO_FETCH_KEYS: !Sub
+  #           - '${Stage}-${Namespace}-notification-email-per-premise-${Region}'
+  #           - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+  #         LAMBDA_TO_INVOKE: !Sub '${Namespace}-outage-email-notifications-batcher'
+  # EmailOutagesWrapperFunctionScheduledEventTrigger:
+  #   Type: AWS::Events::Rule
+  #   Properties:
+  #     ScheduleExpression: rate(1 minute)
+  #     Targets:
+  #       - Id: EmailOutagesWrapperFunctionScheduledEventTriggerLambdaTarget
+  #         Arn: !GetAtt 'EmailOutagesWrapperFunction.Arn'
+  # EmailOutagesWrapperFunctionScheduledEventTriggerPermission:
+  #   Type: AWS::Lambda::Permission
+  #   Properties:
+  #     Action: lambda:invokeFunction
+  #     Principal: events.amazonaws.com
+  #     FunctionName: !Ref 'EmailOutagesWrapperFunction'
+  #     SourceArn: !GetAtt 'EmailOutagesWrapperFunctionScheduledEventTrigger.Arn'
+  # SmsOutagesWrapperFunction:
+  #   Type: AWS::Lambda::Function
+  #   Properties:
+  #     Code: cx-utils/target/cx-utils.jar
+  #     FunctionName: !Sub '${Namespace}-sms-outages-wrapper'
+  #     Handler: com.aep.cx.utils.alerts.aws.request.handlers.FetchListOfKeysFromS3Wrapper::handleRequest
+  #     Role: !Sub 'arn:aws:iam::${AWS::AccountId}:role/CloudAutomation'
+  #     Timeout: 180
+  #     Runtime: java8
+  #     MemorySize: 512
+  #     Tags: 
+  #       - Key: Name
+  #         Value: !Sub '${Namespace}-sms-outages-wrapper'
+  #     Environment:
+  #       Variables:
+  #         OUTAGE_SUSTAINED_BUCKET: !Sub
+  #           - ${Stage}-${Namespace}-outage-sustained-${Region}
+  #           - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+  #         OUTAGE_MOMENTARY_BUCKET: !Sub
+  #           - '${Stage}-${Namespace}-outage-momentary-${Region}'
+  #           - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+  #         BUCKET_NM_TO_FETCH_KEYS: !Sub
+  #           - '${Stage}-${Namespace}-notification-sms-per-premise-${Region}'
+  #           - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+  #         LAMBDA_TO_INVOKE: !Sub '${Namespace}-outage-sms-notifications-batcher'
+  # SmsOutagesWrapperFunctionScheduledEventTrigger:
+  #   Type: AWS::Events::Rule
+  #   Properties:
+  #     ScheduleExpression: rate(1 minute)
+  #     Targets:
+  #       - Id: SmsOutagesWrapperFunctionScheduledEventTriggerLambdaTarget
+  #         Arn: !GetAtt 'SmsOutagesWrapperFunction.Arn'
+  # SmsOutagesWrapperFunctionScheduledEventTriggerPermission:
+  #   Type: AWS::Lambda::Permission
+  #   Properties:
+  #     Action: lambda:invokeFunction
+  #     Principal: events.amazonaws.com
+  #     FunctionName: !Ref 'SmsOutagesWrapperFunction'
+  #     SourceArn: !GetAtt 'SmsOutagesWrapperFunctionScheduledEventTrigger.Arn'  
+  # HistoryOutagesWrapperFunction:
+  #   Type: AWS::Lambda::Function
+  #   Properties:
+  #     Code: cx-utils/target/cx-utils.jar
+  #     FunctionName: !Sub '${Namespace}-message-history-outages-wrapper'
+  #     Handler: com.aep.cx.utils.alerts.aws.request.handlers.FetchListOfKeysFromS3Wrapper::handleRequest
+  #     Role: !Sub 'arn:aws:iam::${AWS::AccountId}:role/CloudAutomation'
+  #     Timeout: 180
+  #     Runtime: java8
+  #     MemorySize: 512
+  #     Tags: 
+  #       - Key: Name
+  #         Value: !Sub '${Namespace}-message-history-outages-wrapper'
+  #     Environment:
+  #       Variables:
+  #         OUTAGE_SUSTAINED_BUCKET: !Sub
+  #           - ${Stage}-${Namespace}-outage-sustained-${Region}
+  #           - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+  #         OUTAGE_MOMENTARY_BUCKET: !Sub
+  #           - '${Stage}-${Namespace}-outage-momentary-${Region}'
+  #           - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+  #         BUCKET_NM_TO_FETCH_KEYS: !Sub
+  #           - '${Stage}-${Namespace}-notification-message-history-per-premise-${Region}'
+  #           - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+  #         LAMBDA_TO_INVOKE: !Sub '${Namespace}-outage-message-history-notifications-batcher'
+  # HistoryOutagesWrapperFunctionScheduledEventTrigger:
+  #   Type: AWS::Events::Rule
+  #   Properties:
+  #     ScheduleExpression: rate(1 minute)
+  #     Targets:
+  #       - Id: HistoryOutagesWrapperFunctionScheduledEventTriggerLambdaTarget
+  #         Arn: !GetAtt 'HistoryOutagesWrapperFunction.Arn'
+  # HistoryOutagesWrapperFunctionScheduledEventTriggerPermission:
+  #   Type: AWS::Lambda::Permission
+  #   Properties:
+  #     Action: lambda:invokeFunction
+  #     Principal: events.amazonaws.com
+  #     FunctionName: !Ref 'HistoryOutagesWrapperFunction'
+  #     SourceArn: !GetAtt 'HistoryOutagesWrapperFunctionScheduledEventTrigger.Arn'
+
+  preferencesDynamoDBTable: 
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties: 
+      AttributeDefinitions: 
+        - 
+          AttributeName: "premiseNumber"
+          AttributeType: "S"
+        - 
+          AttributeName: "accountNumber"
+          AttributeType: "S"
+      KeySchema: 
+        - 
+          AttributeName: "premiseNumber"
+          KeyType: "HASH"
+        - 
+          AttributeName: "accountNumber"
+          KeyType: "RANGE"
+      ProvisionedThroughput: 
+        ReadCapacityUnits: "5"
+        WriteCapacityUnits: "5"
+      TableName: !Sub '${Stage}_${Namespace}_customer_outage_preferences'
+      Tags: 
+        - Key: Name
+          Value: !Sub '${Stage}_${Namespace}_customer_outage_preferences'

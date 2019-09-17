@@ -1,0 +1,1336 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: All AWS resources for the Alerts Solution per Stage (dev/QA/Prod)
+Parameters:
+  Namespace:
+    Type: String
+    Default: alerts
+    Description: Namespace for resource names - MUST BE LOWERCASE
+  Stage:
+    Type: String
+    Description: Stage for resource names - MUST BE LOWERCASE
+Mappings:
+  RegionMap:
+    us-east-1:
+      REGION: e1
+    us-west-1:
+      REGION: w1
+    us-east-2:
+      REGION: e2
+    us-west-2:
+      REGION: w2
+  Environment:
+    pa:
+      Subnets:
+        - subnet-07be4de00807b7c23
+        - subnet-08d31841f8fe54c65
+        - subnet-0baa3fb4d2d923e20
+        - subnet-0e2b23502d48125cc
+        - subnet-0ebe6ee4bc8c6cfca
+        - subnet-04afc5811679c5008
+      SGs:
+        - sg-0104b4ca1fdeb929c
+    dev:
+      Subnets:
+        - subnet-07be4de00807b7c23
+        - subnet-08d31841f8fe54c65
+        - subnet-0baa3fb4d2d923e20
+        - subnet-0e2b23502d48125cc
+        - subnet-0ebe6ee4bc8c6cfca
+        - subnet-04afc5811679c5008
+      SGs:
+        - sg-0104b4ca1fdeb929c
+    qa:
+      Subnets:
+        - subnet-0c3ae96e12b8fb3a9
+        - subnet-096a4ab6680b37206
+        - subnet-0317e30219ed6ef40
+        - subnet-054a2eac04cc54851
+        - subnet-0e1124662f0d33b85
+        - subnet-079b50bb436b4a700
+      SGs:
+        - sg-000f671b12164e985
+    prod:
+      Subnets:
+        - subnet-0c3ae96e12b8fb3a9
+        - subnet-096a4ab6680b37206
+        - subnet-0317e30219ed6ef40
+        - subnet-054a2eac04cc54851
+        - subnet-0e1124662f0d33b85
+        - subnet-079b50bb436b4a700
+      SGs:
+        - sg-06e706217907f0b6b
+Conditions:
+  CreateProdResources: !Equals
+    - !Ref 'Stage'
+    - prod
+Resources:
+  OutageRawBucket:
+    DependsOn: OutageRawBucketPermission
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub
+      - '${Stage}-${Namespace}-outage-raw-${Region}'
+      - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      Tags: 
+        - Key: Name
+          Value: !Sub
+          - '${Stage}-${Namespace}-outage-raw-${Region}'
+          - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration: !If
+        - CreateProdResources
+        - Status: Enabled
+        - !Ref 'AWS::NoValue'
+      NotificationConfiguration:
+        LambdaConfigurations:
+        - Event: 's3:ObjectCreated:*'
+          Function: !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${Namespace}-outage-batch-processor'
+  OutageRawBucketPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName: !Sub '${Namespace}-outage-batch-processor'
+      Principal: s3.amazonaws.com
+      SourceAccount: !Ref "AWS::AccountId"
+      SourceArn: !Sub 
+      - "arn:aws:s3:::${Stage}-${Namespace}-outage-raw-${Region}"
+      - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+  OutageSustainedBucket:
+    DependsOn: OutageSustainedBucketPermission
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub
+      - '${Stage}-${Namespace}-outage-sustained-${Region}'
+      - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      Tags: 
+        - Key: Name
+          Value: !Sub
+          - '${Stage}-${Namespace}-outage-sustained-${Region}'
+          - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration: !If
+        - CreateProdResources
+        - Status: Enabled
+        - !Ref 'AWS::NoValue'
+      NotificationConfiguration:
+        LambdaConfigurations:
+        - Event: 's3:ObjectCreated:*'
+          Function: !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${Namespace}-notification-sustained-content-builder'
+  OutageSustainedBucketPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName: !Sub '${Namespace}-notification-sustained-content-builder'
+      Principal: s3.amazonaws.com
+      SourceAccount: !Ref "AWS::AccountId"
+      SourceArn: !Sub 
+      - "arn:aws:s3:::${Stage}-${Namespace}-outage-sustained-${Region}"
+      - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+  OutageFailedSustainedBucket:
+    DependsOn: OutagefailedSustainedBucketPermission
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub
+      - '${Stage}-${Namespace}-outage-failed-sustained-${Region}'
+      - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      Tags: 
+        - Key: Name
+          Value: !Sub
+          - '${Stage}-${Namespace}-outage-failed-sustained-${Region}'
+          - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration: !If
+        - CreateProdResources
+        - Status: Enabled
+        - !Ref 'AWS::NoValue'
+      NotificationConfiguration:
+        LambdaConfigurations:
+        - Event: 's3:ObjectCreated:*'
+          Function: !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${Namespace}-notification-sustained-content-builder'
+  OutagefailedSustainedBucketPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName: !Sub '${Namespace}-notification-sustained-content-builder'
+      Principal: s3.amazonaws.com
+      SourceAccount: !Ref "AWS::AccountId"
+      SourceArn: !Sub 
+      - "arn:aws:s3:::${Stage}-${Namespace}-outage-failed-sustained-${Region}"
+      - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]               
+  OutageRestoredBucket:
+    DependsOn: OutageRestoredBucketPermission
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub
+      - '${Stage}-${Namespace}-outage-restored-${Region}'
+      - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      Tags: 
+        - Key: Name
+          Value: !Sub
+          - '${Stage}-${Namespace}-outage-restored-${Region}'
+          - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration: !If
+        - CreateProdResources
+        - Status: Enabled
+        - !Ref 'AWS::NoValue'
+      NotificationConfiguration:
+        LambdaConfigurations:
+        - Event: 's3:ObjectCreated:*'
+          Function: !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${Namespace}-notification-restored-content-builder'
+  OutageRestoredBucketPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName: !Sub '${Namespace}-notification-restored-content-builder'
+      Principal: s3.amazonaws.com
+      SourceAccount: !Ref "AWS::AccountId"
+      SourceArn: !Sub 
+      - "arn:aws:s3:::${Stage}-${Namespace}-outage-restored-${Region}"
+      - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+  OutageFailedRestoredBucket:
+    DependsOn: OutageFailedRestoredBucketPermission
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub
+      - '${Stage}-${Namespace}-outage-failed-restored-${Region}'
+      - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      Tags: 
+        - Key: Name
+          Value: !Sub
+          - '${Stage}-${Namespace}-outage-failed-restored-${Region}'
+          - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration: !If
+        - CreateProdResources
+        - Status: Enabled
+        - !Ref 'AWS::NoValue'
+      NotificationConfiguration:
+        LambdaConfigurations:
+        - Event: 's3:ObjectCreated:*'
+          Function: !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${Namespace}-notification-restored-content-builder'
+  OutageFailedRestoredBucketPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName: !Sub '${Namespace}-notification-restored-content-builder'
+      Principal: s3.amazonaws.com
+      SourceAccount: !Ref "AWS::AccountId"
+      SourceArn: !Sub 
+      - "arn:aws:s3:::${Stage}-${Namespace}-outage-failed-restored-${Region}"
+      - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]      
+  OutageMomentaryBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub
+      - '${Stage}-${Namespace}-outage-momentary-${Region}'
+      - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      Tags: 
+        - Key: Name
+          Value: !Sub
+          - '${Stage}-${Namespace}-outage-momentary-${Region}'
+          - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration: !If
+        - CreateProdResources
+        - Status: Enabled
+        - !Ref 'AWS::NoValue'
+  OutageSMSContentBucket:
+    DependsOn: OutageSMSContentBucketPermission
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub
+      - '${Stage}-${Namespace}-outage-sms-content-${Region}'
+      - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      Tags: 
+        - Key: Name
+          Value: !Sub
+          - '${Stage}-${Namespace}-outage-sms-content-${Region}'
+          - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration: !If
+        - CreateProdResources
+        - Status: Enabled
+        - !Ref 'AWS::NoValue'
+      NotificationConfiguration:
+        LambdaConfigurations:
+        - Event: 's3:ObjectCreated:*'
+          Function: !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${Namespace}-outage-sms-notification-sender'
+  OutageSMSContentBucketPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName: !Sub '${Namespace}-outage-sms-notification-sender'
+      Principal: s3.amazonaws.com
+      SourceAccount: !Ref "AWS::AccountId"
+      SourceArn: !Sub 
+      - "arn:aws:s3:::${Stage}-${Namespace}-outage-sms-content-${Region}"
+      - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+  OutageEmailContentBucket:
+    DependsOn: OutageEmailContentBucketPermission
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub
+      - '${Stage}-${Namespace}-outage-email-content-${Region}'
+      - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      Tags: 
+        - Key: Name
+          Value: !Sub
+          - '${Stage}-${Namespace}-outage-email-content-${Region}'
+          - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration: !If
+        - CreateProdResources
+        - Status: Enabled
+        - !Ref 'AWS::NoValue'
+      NotificationConfiguration:
+        LambdaConfigurations:
+        - Event: 's3:ObjectCreated:*'
+          Function: !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${Namespace}-outage-email-notification-sender'
+  OutageEmailContentBucketPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName: !Sub '${Namespace}-outage-email-notification-sender'
+      Principal: s3.amazonaws.com
+      SourceAccount: !Ref "AWS::AccountId"
+      SourceArn: !Sub 
+      - "arn:aws:s3:::${Stage}-${Namespace}-outage-email-content-${Region}"
+      - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+  NotificationMessageHistoryBucket:    
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub
+      - '${Stage}-${Namespace}-notification-message-history-per-premise-${Region}'
+      - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      Tags: 
+        - Key: Name
+          Value: !Sub
+          - '${Stage}-${Namespace}-notification-message-history-per-premise-${Region}'
+          - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration: !If
+        - CreateProdResources
+        - Status: Enabled
+        - !Ref 'AWS::NoValue'     
+  OutageHistoryContentBucket:
+    DependsOn: OutageHistoryContentBucketPermission
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub
+      - '${Stage}-${Namespace}-outage-history-content-${Region}'
+      - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      Tags: 
+        - Key: Name
+          Value: !Sub
+          - '${Stage}-${Namespace}-outage-history-content-${Region}'
+          - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration: !If
+        - CreateProdResources
+        - Status: Enabled
+        - !Ref 'AWS::NoValue'
+      NotificationConfiguration:
+        LambdaConfigurations:
+        - Event: 's3:ObjectCreated:*'
+          Function: !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${Namespace}-outage-message-history-notification-sender'
+  OutageHistoryContentBucketPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName: !Sub '${Namespace}-outage-message-history-notification-sender'
+      Principal: s3.amazonaws.com
+      SourceAccount: !Ref "AWS::AccountId"
+      SourceArn: !Sub 
+      - "arn:aws:s3:::${Stage}-${Namespace}-outage-history-content-${Region}"
+      - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+  NotificationSMSPerPremiseBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub
+      - '${Stage}-${Namespace}-notification-sms-per-premise-${Region}'
+      - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      Tags: 
+        - Key: Name
+          Value: !Sub
+          - '${Stage}-${Namespace}-notification-sms-per-premise-${Region}'
+          - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration: !If
+        - CreateProdResources
+        - Status: Enabled
+        - !Ref 'AWS::NoValue'
+  NotificationEmailPerPremiseBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub
+      - '${Stage}-${Namespace}-notification-email-per-premise-${Region}'
+      - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      Tags: 
+        - Key: Name
+          Value: !Sub
+          - '${Stage}-${Namespace}-notification-email-per-premise-${Region}'
+          - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration: !If
+        - CreateProdResources
+        - Status: Enabled
+        - !Ref 'AWS::NoValue'
+  OutageExceptionBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub
+      - '${Stage}-${Namespace}-outage-exception-${Region}'
+      - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      Tags: 
+        - Key: Name
+          Value: !Sub
+          - '${Stage}-${Namespace}-outage-exception-${Region}'
+          - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration: !If
+        - CreateProdResources
+        - Status: Enabled
+        - !Ref 'AWS::NoValue'
+  OutageBatchStatisticsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub
+      - '${Stage}-${Namespace}-outage-batch-statistics-${Region}'
+      - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      Tags: 
+        - Key: Name
+          Value: !Sub
+          - '${Stage}-${Namespace}-outage-batch-statistics-${Region}'
+          - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration: !If
+        - CreateProdResources
+        - Status: Enabled
+        - !Ref 'AWS::NoValue'
+  PreferencesRawBucket:
+    DependsOn: PreferencesRawBucketPermission
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub
+      - '${Stage}-${Namespace}-preferences-raw-${Region}'
+      - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      Tags: 
+        - Key: Name
+          Value: !Sub
+          - '${Stage}-${Namespace}-preferences-raw-${Region}'
+          - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration: !If
+        - CreateProdResources
+        - Status: Enabled
+        - !Ref 'AWS::NoValue'
+      NotificationConfiguration:
+        LambdaConfigurations:
+        - Event: 's3:ObjectCreated:*'
+          Function: !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${Namespace}-preferences-batch-processor'
+  PreferencesRawBucketPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName: !Sub '${Namespace}-preferences-batch-processor'
+      Principal: s3.amazonaws.com
+      SourceAccount: !Ref "AWS::AccountId"
+      SourceArn: !Sub 
+      - "arn:aws:s3:::${Stage}-${Namespace}-preferences-raw-${Region}"
+      - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+  OneTimePreferencesRawBucket:
+    DependsOn: OneTimePreferencesRawBucketPermission
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub
+      - '${Stage}-${Namespace}-preferences-onetime-raw-${Region}'
+      - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      Tags: 
+        - Key: Name
+          Value: !Sub
+          - '${Stage}-${Namespace}-preferences-onetime-raw-${Region}'
+          - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration: !If
+        - CreateProdResources
+        - Status: Enabled
+        - !Ref 'AWS::NoValue'
+      NotificationConfiguration:
+        LambdaConfigurations:
+        - Event: 's3:ObjectCreated:*'
+          Function: !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${Namespace}-preferences-onetime-processor'
+  OneTimePreferencesRawBucketPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName: !Sub '${Namespace}-preferences-onetime-processor'
+      Principal: s3.amazonaws.com
+      SourceAccount: !Ref "AWS::AccountId"
+      SourceArn: !Sub 
+      - "arn:aws:s3:::${Stage}-${Namespace}-preferences-onetime-raw-${Region}"
+      - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]      
+  NotApplicableReasonBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub
+      - '${Stage}-${Namespace}-not-applicable-reason-${Region}'
+      - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      Tags: 
+        - Key: Name
+          Value: !Sub
+          - '${Stage}-${Namespace}-not-applicable-reason-${Region}'
+          - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration: !If
+        - CreateProdResources
+        - Status: Enabled
+        - !Ref 'AWS::NoValue'
+  DestroyedMomentaryBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub
+      - '${Stage}-${Namespace}-destroyed-momentary-${Region}'
+      - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      Tags: 
+        - Key: Name
+          Value: !Sub
+          - '${Stage}-${Namespace}-destroyed-momentary-${Region}'
+          - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration: !If
+        - CreateProdResources
+        - Status: Enabled
+        - !Ref 'AWS::NoValue'        
+  NoSubscriptionsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub
+      - '${Stage}-${Namespace}-no-subscriptions-${Region}'
+      - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      Tags: 
+        - Key: Name
+          Value: !Sub
+          - '${Stage}-${Namespace}-no-subscriptions-${Region}'
+          - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration: !If
+        - CreateProdResources
+        - Status: Enabled
+        - !Ref 'AWS::NoValue'
+  OutageBatchAggregateStatisticsBucket:
+    DependsOn: OutageBatchAggregateStatisticsBucketPermission
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub
+      - '${Stage}-${Namespace}-outage-batch-aggregate-statistics-${Region}'
+      - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      Tags: 
+        - Key: Name
+          Value: !Sub
+          - '${Stage}-${Namespace}-outage-batch-aggregate-statistics-${Region}'
+          - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration: !If
+        - CreateProdResources
+        - Status: Enabled
+        - !Ref 'AWS::NoValue'
+      NotificationConfiguration:
+        LambdaConfigurations:
+        - Event: 's3:ObjectCreated:*'
+          Function: !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${Namespace}-outage-batch-statistics-aggregator'
+  OutageBatchAggregateStatisticsBucketPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName: !Sub '${Namespace}-outage-batch-statistics-aggregator'
+      Principal: s3.amazonaws.com
+      SourceAccount: !Ref "AWS::AccountId"
+      SourceArn: !Sub 
+      - "arn:aws:s3:::${Stage}-${Namespace}-outage-batch-aggregate-statistics-${Region}"
+      - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+#---------------------BILLING S3 BUCKETS START HERE ------------------------
+  BillingRawBucket:
+    #DependsOn: BillingRawBucketPermission
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub
+      - '${Stage}-${Namespace}-billing-raw-${Region}'
+      - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      Tags: 
+        - Key: Name
+          Value: !Sub
+          - '${Stage}-${Namespace}-billing-raw-${Region}'
+          - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration: !If
+        - CreateProdResources
+        - Status: Enabled
+        - !Ref 'AWS::NoValue'
+  ProfileRawBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub
+      - '${Stage}-${Namespace}-billing-profile-raw-${Region}'
+      - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      Tags: 
+        - Key: Name
+          Value: !Sub
+          - '${Stage}-${Namespace}-billing-profile-raw-${Region}'
+          - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration: !If
+        - CreateProdResources
+        - Status: Enabled
+        - !Ref 'AWS::NoValue'
+  BillingPreferencesBucket:
+    #DependsOn: BillingPreferencesBucketPermission
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub
+      - '${Stage}-${Namespace}-billing-preferences-${Region}'
+      - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      Tags: 
+        - Key: Name
+          Value: !Sub
+          - '${Stage}-${Namespace}-preferences-${Region}'
+          - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration: !If
+        - CreateProdResources
+        - Status: Enabled
+        - !Ref 'AWS::NoValue'
+#       NotificationConfiguration:
+#         LambdaConfigurations:
+#         - Event: 's3:ObjectCreated:*'
+#           Function: !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${Namespace}-billing-preferences-batch-processor'
+#   BillingPreferencesBucketPermission:
+#     Type: AWS::Lambda::Permission
+#     Properties:
+#       Action: 'lambda:InvokeFunction'
+#       FunctionName: !Sub '${Namespace}-billing-preferences-batch-processor'
+#       Principal: s3.amazonaws.com
+#       SourceAccount: !Ref "AWS::AccountId"
+#       SourceArn: !Sub 
+#       - "arn:aws:s3:::${Stage}-${Namespace}-billing-preferences-${Region}"
+#       - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+  BillingBillDueBucket:
+    DependsOn: BillingBillDueBucketPermission
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub
+      - '${Stage}-${Namespace}-billing-billdue-${Region}'
+      - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      Tags: 
+        - Key: Name
+          Value: !Sub
+          - '${Stage}-${Namespace}-billing-billdue-${Region}'
+          - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration: !If
+        - CreateProdResources
+        - Status: Enabled
+        - !Ref 'AWS::NoValue'
+      NotificationConfiguration:
+          LambdaConfigurations:
+          - Event: 's3:ObjectCreated:*'
+            Function: !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${Namespace}-billing-process-billdue'
+  BillingBillDueBucketPermission:
+     Type: AWS::Lambda::Permission
+     Properties:
+       Action: 'lambda:InvokeFunction'
+       FunctionName: !Sub '${Namespace}-billing-process-billdue'
+       Principal: s3.amazonaws.com
+       SourceAccount: !Ref "AWS::AccountId"
+       SourceArn: !Sub 
+       - "arn:aws:s3:::${Stage}-${Namespace}-billing-billdue-${Region}"
+       - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]  
+  OrderPreferencesBucket:
+    #DependsOn: OrderPreferencesBucketPermission
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub
+      - '${Stage}-${Namespace}-order-preferences-${Region}'
+      - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      Tags: 
+        - Key: Name
+          Value: !Sub
+          - '${Stage}-${Namespace}-preferences-${Region}'
+          - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration: !If
+        - CreateProdResources
+        - Status: Enabled
+        - !Ref 'AWS::NoValue'
+#       NotificationConfiguration:
+#         LambdaConfigurations:
+#         - Event: 's3:ObjectCreated:*'
+#           Function: !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${Namespace}-order-preferences-batch-processor'
+#   OrderPreferencesBucketPermission:
+#     Type: AWS::Lambda::Permission
+#     Properties:
+#       Action: 'lambda:InvokeFunction'
+#       FunctionName: !Sub '${Namespace}-order-preferences-batch-processor'
+#       Principal: s3.amazonaws.com
+#       SourceAccount: !Ref "AWS::AccountId"
+#       SourceArn: !Sub 
+#       - "arn:aws:s3:::${Stage}-${Namespace}-order-preferences-${Region}"
+#       - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+  PowerpayPreferencesRawBucket:
+    #DependsOn: PowerpayPreferencesBucketPermission
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub
+      - '${Stage}-${Namespace}-powerpay-preferences-${Region}'
+      - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      Tags: 
+        - Key: Name
+          Value: !Sub
+          - '${Stage}-${Namespace}-powerpay-preferences-${Region}'
+          - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration: !If
+        - CreateProdResources
+        - Status: Enabled
+        - !Ref 'AWS::NoValue'
+#       NotificationConfiguration:
+#         LambdaConfigurations:
+#         - Event: 's3:ObjectCreated:*'
+#           Function: !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${Namespace}-powerpay-preferences-batch-processor'
+#   PowerpayPreferencesBucketPermission:
+#     Type: AWS::Lambda::Permission
+#     Properties:
+#       Action: 'lambda:InvokeFunction'
+#       FunctionName: !Sub '${Namespace}-powerpay-preferences-batch-processor'
+#       Principal: s3.amazonaws.com
+#       SourceAccount: !Ref "AWS::AccountId"
+#       SourceArn: !Sub 
+#       - "arn:aws:s3:::${Stage}-${Namespace}-powerpay-preferences-${Region}"
+#       - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+  BillingPaymentBucket:
+    DependsOn: BillingPaymentBucketPermission
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub
+      - '${Stage}-${Namespace}-billing-payment-${Region}'
+      - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      Tags: 
+        - Key: Name
+          Value: !Sub
+          - '${Stage}-${Namespace}-billing-payment-${Region}'
+          - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration: !If
+        - CreateProdResources
+        - Status: Enabled
+        - !Ref 'AWS::NoValue'
+      NotificationConfiguration:
+        LambdaConfigurations:
+        - Event: 's3:ObjectCreated:*'
+          Function: !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${Namespace}-billing-payment-processor'
+  BillingPaymentBucketPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName: !Sub '${Namespace}-billing-payment-processor'
+      Principal: s3.amazonaws.com
+      SourceAccount: !Ref "AWS::AccountId"
+      SourceArn: !Sub 
+      - "arn:aws:s3:::${Stage}-${Namespace}-billing-payment-${Region}"
+      - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+  BillingDisconnectNoticeBucket:
+    DependsOn: BillingDisconnectNoticeBucketPermission
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub
+      - '${Stage}-${Namespace}-billing-disconnect-notice-${Region}'
+      - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      Tags: 
+        - Key: Name
+          Value: !Sub
+          - '${Stage}-${Namespace}-billing-disconnect-notice-${Region}'
+          - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration: !If
+        - CreateProdResources
+        - Status: Enabled
+        - !Ref 'AWS::NoValue'
+      NotificationConfiguration:
+        LambdaConfigurations:
+        - Event: 's3:ObjectCreated:*'
+          Function: !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${Namespace}-billing-disconnect-notice-processor'
+  BillingDisconnectNoticeBucketPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName: !Sub '${Namespace}-billing-disconnect-notice-processor'
+      Principal: s3.amazonaws.com
+      SourceAccount: !Ref "AWS::AccountId"
+      SourceArn: !Sub 
+      - "arn:aws:s3:::${Stage}-${Namespace}-billing-disconnect-notice-${Region}"
+      - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+  BillingDisconnectedBucket:
+    DependsOn: BillingDisconnectedBucketPermission
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub
+      - '${Stage}-${Namespace}-billing-disconnected-${Region}'
+      - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      Tags: 
+        - Key: Name
+          Value: !Sub
+          - '${Stage}-${Namespace}-billing-disconnected-${Region}'
+          - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration: !If
+        - CreateProdResources
+        - Status: Enabled
+        - !Ref 'AWS::NoValue'
+      NotificationConfiguration:
+        LambdaConfigurations:
+        - Event: 's3:ObjectCreated:*'
+          Function: !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${Namespace}-billing-disconnected-processor'
+  BillingDisconnectedBucketPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName: !Sub '${Namespace}-billing-disconnected-processor'
+      Principal: s3.amazonaws.com
+      SourceAccount: !Ref "AWS::AccountId"
+      SourceArn: !Sub 
+      - "arn:aws:s3:::${Stage}-${Namespace}-billing-disconnected-${Region}"
+      - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+  BillingReconnectedBucket:
+    DependsOn: BillingReconnectedBucketPermission
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub
+      - '${Stage}-${Namespace}-billing-reconnected-${Region}'
+      - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      Tags: 
+        - Key: Name
+          Value: !Sub
+          - '${Stage}-${Namespace}-billing-reconnected-${Region}'
+          - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration: !If
+        - CreateProdResources
+        - Status: Enabled
+        - !Ref 'AWS::NoValue'
+      NotificationConfiguration:
+        LambdaConfigurations:
+        - Event: 's3:ObjectCreated:*'
+          Function: !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${Namespace}-billing-reconnected-processor'
+  BillingReconnectedBucketPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName: !Sub '${Namespace}-billing-reconnected-processor'
+      Principal: s3.amazonaws.com
+      SourceAccount: !Ref "AWS::AccountId"
+      SourceArn: !Sub 
+      - "arn:aws:s3:::${Stage}-${Namespace}-billing-reconnected-${Region}"
+      - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+  BillingCPPBucket:
+    DependsOn: BillingCPPBucketPermission
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub
+      - '${Stage}-${Namespace}-billing-cpp-${Region}'
+      - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      Tags: 
+        - Key: Name
+          Value: !Sub
+          - '${Stage}-${Namespace}-billing-cpp-${Region}'
+          - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration: !If
+        - CreateProdResources
+        - Status: Enabled
+        - !Ref 'AWS::NoValue'
+      NotificationConfiguration:
+        LambdaConfigurations:
+        - Event: 's3:ObjectCreated:*'
+          Function: !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${Namespace}-billing-cpp-processor'
+  BillingCPPBucketPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName: !Sub '${Namespace}-billing-cpp-processor'
+      Principal: s3.amazonaws.com
+      SourceAccount: !Ref "AWS::AccountId"
+      SourceArn: !Sub 
+      - "arn:aws:s3:::${Stage}-${Namespace}-billing-cpp-${Region}"
+      - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+  BillingReturnCheckBucket:
+    DependsOn: BillingReturnCheckBucketPermission
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub
+      - '${Stage}-${Namespace}-billing-return-check-${Region}'
+      - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      Tags: 
+        - Key: Name
+          Value: !Sub
+          - '${Stage}-${Namespace}-billing-return-check-${Region}'
+          - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration: !If
+        - CreateProdResources
+        - Status: Enabled
+        - !Ref 'AWS::NoValue'
+      NotificationConfiguration:
+        LambdaConfigurations:
+        - Event: 's3:ObjectCreated:*'
+          Function: !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${Namespace}-billing-return-check-processor'
+  BillingReturnCheckBucketPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName: !Sub '${Namespace}-billing-return-check-processor'
+      Principal: s3.amazonaws.com
+      SourceAccount: !Ref "AWS::AccountId"
+      SourceArn: !Sub 
+      - "arn:aws:s3:::${Stage}-${Namespace}-billing-return-check-${Region}"
+      - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+  BillingProfileBucket:
+    DependsOn: BillingProfileBucketPermission
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub
+      - '${Stage}-${Namespace}-billing-profile-${Region}'
+      - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      Tags: 
+        - Key: Name
+          Value: !Sub
+          - '${Stage}-${Namespace}-billing-profile-${Region}'
+          - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration: !If
+        - CreateProdResources
+        - Status: Enabled
+        - !Ref 'AWS::NoValue'
+      NotificationConfiguration:
+        LambdaConfigurations:
+        - Event: 's3:ObjectCreated:*'
+          Function: !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${Namespace}-billing-subscriptions-processor'
+  BillingProfileBucketPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName: !Sub '${Namespace}-billing-subscriptions-processor'
+      Principal: s3.amazonaws.com
+      SourceAccount: !Ref "AWS::AccountId"
+      SourceArn: !Sub 
+      - "arn:aws:s3:::${Stage}-${Namespace}-billing-profile-${Region}"
+      - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION] 
+ 
+  BillingOrderTrackingBucket:
+    DependsOn: BillingOrderTrackingBucketPermission
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub
+      - '${Stage}-${Namespace}-billing-ordertracking-${Region}'
+      - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      Tags: 
+        - Key: Name
+          Value: !Sub
+          - '${Stage}-${Namespace}-billing-ordertracking-${Region}'
+          - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration: !If
+        - CreateProdResources
+        - Status: Enabled
+        - !Ref 'AWS::NoValue'
+      NotificationConfiguration:
+        LambdaConfigurations:
+        - Event: 's3:ObjectCreated:*'
+          Function: !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${Namespace}-billing-ordertracking-processor'
+  BillingOrderTrackingBucketPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName: !Sub '${Namespace}-billing-ordertracking-processor'
+      Principal: s3.amazonaws.com
+      SourceAccount: !Ref "AWS::AccountId"
+      SourceArn: !Sub 
+      - "arn:aws:s3:::${Stage}-${Namespace}-billing-ordertracking-${Region}"
+      - Region : !FindInMap [RegionMap, !Ref 'AWS::Region', REGION]          
+#---------------------API GATEWAY STARTS HERE ---------------------
+  outagesAPIGateway:
+    Type: "AWS::ApiGateway::RestApi"
+    Properties:
+      Name: !Sub 'outage-${Namespace}-API'
+      Description: API for all outage alert
+  outageAPIGatewayRootMethod:
+    Type: "AWS::ApiGateway::Method"
+    Properties:
+      ApiKeyRequired: 'true'
+      AuthorizationType: "NONE"
+      HttpMethod: "POST"
+      Integration:
+        Credentials: !Sub 'arn:aws:iam::${AWS::AccountId}:role/CloudAPIGateway'
+        IntegrationHttpMethod: "POST"
+        Type: "AWS"
+        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${Namespace}-outage-batch-landing/invocations"
+        IntegrationResponses:
+          - StatusCode: 200
+      MethodResponses:
+      - ResponseModels: 
+          application/json: Empty
+        StatusCode: 200
+      ResourceId: !GetAtt "outagesAPIGateway.RootResourceId"
+      RestApiId: !Ref "outagesAPIGateway"
+  outageAPIGatewayDeployment:
+    Type: "AWS::ApiGateway::Deployment"
+    DependsOn:
+      - "outageAPIGatewayRootMethod"
+    Properties:
+      RestApiId: !Ref "outagesAPIGateway"
+  outageDevStage:
+    Type: AWS::ApiGateway::Stage
+    Properties:
+      StageName: !Ref Stage
+      Description: !Ref Stage
+      RestApiId: !Ref outagesAPIGateway
+      DeploymentId: !Ref outageAPIGatewayDeployment
+  outageApiKey:
+    Type: 'AWS::ApiGateway::ApiKey'
+    DependsOn:
+      - outageAPIGatewayDeployment
+      - outageDevStage
+    Properties:
+      Description: CloudFormation API Key V1
+      Enabled: 'true'
+      StageKeys:
+        - RestApiId: !Ref outagesAPIGateway
+          StageName: !Ref Stage
+  outageUsagePlan:
+    Type: 'AWS::ApiGateway::UsagePlan'
+    Properties:
+      ApiStages:
+        - ApiId: !Ref outagesAPIGateway
+          Stage: !Ref outageDevStage
+      Description: Dev usage plan to tie to Key
+      # Quota:
+      #   Limit: 5000
+      #   Period: MONTH
+      # Throttle:
+      #   BurstLimit: 200
+      #   RateLimit: 100
+      # UsagePlanName: Plan_ABC
+  outageUsagePlanKey:
+    Type: 'AWS::ApiGateway::UsagePlanKey'
+    Properties:
+      KeyId: !Ref outageApiKey
+      KeyType: API_KEY
+      UsagePlanId: !Ref outageUsagePlan
+  
+  preferencesAPIGateway:
+    Type: "AWS::ApiGateway::RestApi"
+    Properties:
+      Name: !Sub 'preferences-${Namespace}-API'
+      Description: API for all outage alert
+  preferencesAPIGatewayRootMethod:
+    Type: "AWS::ApiGateway::Method"
+    Properties:
+      ApiKeyRequired: 'true'
+      AuthorizationType: "NONE"
+      HttpMethod: "POST"
+      Integration:
+        Credentials: !Sub 'arn:aws:iam::${AWS::AccountId}:role/CloudAPIGateway'
+        IntegrationHttpMethod: "POST"
+        Type: "AWS"
+        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${Namespace}-preferences-batch-landing/invocations"
+        IntegrationResponses:
+          - StatusCode: 200
+      ResourceId: !GetAtt "preferencesAPIGateway.RootResourceId"
+      RestApiId: !Ref "preferencesAPIGateway"
+      MethodResponses:
+      - ResponseModels: 
+          application/json: Empty
+        StatusCode: 200
+  preferencesAPIGatewayDeployment:
+    Type: "AWS::ApiGateway::Deployment"
+    DependsOn:
+      - "preferencesAPIGatewayRootMethod"
+    Properties:
+      RestApiId: !Ref "preferencesAPIGateway"
+  preferencesDevStage:
+    Type: AWS::ApiGateway::Stage
+    Properties:
+      StageName: !Ref Stage
+      Description: !Ref Stage
+      RestApiId: !Ref preferencesAPIGateway
+      DeploymentId: !Ref preferencesAPIGatewayDeployment
+  preferencesApiKey:
+    Type: 'AWS::ApiGateway::ApiKey'
+    DependsOn:
+      - preferencesAPIGatewayDeployment
+      - preferencesDevStage
+    Properties:
+      Description: CloudFormation API Key V1
+      Enabled: 'true'
+      StageKeys:
+        - RestApiId: !Ref preferencesAPIGateway
+          StageName: !Ref Stage
+  preferencesUsagePlan:
+    Type: 'AWS::ApiGateway::UsagePlan'
+    Properties:
+      ApiStages:
+        - ApiId: !Ref preferencesAPIGateway
+          Stage: !Ref preferencesDevStage
+      Description: Dev usage plan to tie to Key
+  preferencesUsagePlanKey:
+    Type: 'AWS::ApiGateway::UsagePlanKey'
+    Properties:
+      KeyId: !Ref preferencesApiKey
+      KeyType: API_KEY
+      UsagePlanId: !Ref preferencesUsagePlan
+  
+  
+  billingAPIGateway:
+    Type: "AWS::ApiGateway::RestApi"
+    Properties:
+      Name: !Sub 'billing-${Namespace}-API'
+      Description: API for all incoming alerts from MACSS
+  billingAPIGatewayPreferencesResource:
+    Type: 'AWS::ApiGateway::Resource'
+    Properties:
+      RestApiId: !Ref billingAPIGateway
+      ParentId: !GetAtt billingAPIGateway.RootResourceId
+      PathPart: preferences
+  billingAPIGatewayPreferencesMethod:
+    Type: "AWS::ApiGateway::Method"
+    Properties:
+      ApiKeyRequired: 'true'
+      AuthorizationType: "NONE"
+      HttpMethod: "POST"
+      Integration:
+        Credentials: !Sub 'arn:aws:iam::${AWS::AccountId}:role/CloudAPIGateway'
+        IntegrationHttpMethod: "POST"
+        Type: "AWS"
+        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${Namespace}-preferences-batch-landing/invocations"
+        IntegrationResponses:
+          - StatusCode: 200
+      ResourceId: !Ref billingAPIGatewayPreferencesResource
+      RestApiId: !Ref "billingAPIGateway"
+      MethodResponses:
+      - ResponseModels: 
+          application/json: Empty
+        StatusCode: 200
+  billingAPIGatewayBillingResource:
+    Type: 'AWS::ApiGateway::Resource'
+    Properties:
+      RestApiId: !Ref billingAPIGateway
+      ParentId: !GetAtt billingAPIGateway.RootResourceId
+      PathPart: billing
+  billingAPIGatewayBillingMethod:
+    Type: "AWS::ApiGateway::Method"
+    Properties:
+      ApiKeyRequired: 'true'
+      AuthorizationType: "NONE"
+      HttpMethod: "POST"
+      Integration:
+        Credentials: !Sub 'arn:aws:iam::${AWS::AccountId}:role/CloudAPIGateway'
+        IntegrationHttpMethod: "POST"
+        Type: "AWS"
+        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${Namespace}-billing-batch-landing/invocations"
+        IntegrationResponses:
+          - StatusCode: 200
+        PassthroughBehavior: WHEN_NO_TEMPLATES
+        RequestTemplates:
+          application/json: "##  See http://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-mapping-template-reference.html\n##  This template will pass through all parameters including path, querystring, header, stage variables, and context through to the integration endpoint via the body/payload\n#set($allParams = $input.params())\n{\n\"body-json\" : $input.json('$'),\n\"params\" : {\n#foreach($type in $allParams.keySet())\n    #set($params = $allParams.get($type))\n\"$type\" : {\n    #foreach($paramName in $params.keySet())\n    \"$paramName\" : \"$util.escapeJavaScript($params.get($paramName))\"\n        #if($foreach.hasNext),#end\n    #end\n}\n    #if($foreach.hasNext),#end\n#end\n},\n\"stage-variables\" : {\n#foreach($key in $stageVariables.keySet())\n\"$key\" : \"$util.escapeJavaScript($stageVariables.get($key))\"\n    #if($foreach.hasNext),#end\n#end\n},\n\"context\" : {\n    \"account-id\" : \"$context.identity.accountId\",\n    \"api-id\" : \"$context.apiId\",\n    \"api-key\" : \"$context.identity.apiKey\",\n    \"authorizer-principal-id\" : \"$context.authorizer.principalId\",\n    \"caller\" : \"$context.identity.caller\",\n    \"cognito-authentication-provider\" : \"$context.identity.cognitoAuthenticationProvider\",\n    \"cognito-authentication-type\" : \"$context.identity.cognitoAuthenticationType\",\n    \"cognito-identity-id\" : \"$context.identity.cognitoIdentityId\",\n    \"cognito-identity-pool-id\" : \"$context.identity.cognitoIdentityPoolId\",\n    \"http-method\" : \"$context.httpMethod\",\n    \"stage\" : \"$context.stage\",\n    \"source-ip\" : \"$context.identity.sourceIp\",\n    \"user\" : \"$context.identity.user\",\n    \"user-agent\" : \"$context.identity.userAgent\",\n    \"user-arn\" : \"$context.identity.userArn\",\n    \"request-id\" : \"$context.requestId\",\n    \"resource-id\" : \"$context.resourceId\",\n    \"resource-path\" : \"$context.resourcePath\"\n    }\n}\n"
+      ResourceId: !Ref billingAPIGatewayBillingResource
+      RestApiId: !Ref "billingAPIGateway"
+      MethodResponses:
+      - ResponseModels: 
+          application/json: Empty
+        StatusCode: 200
+  billingAPIGatewayDeployment:
+    Type: "AWS::ApiGateway::Deployment"
+    DependsOn:
+      - "billingAPIGatewayPreferencesMethod"
+      - "billingAPIGatewayBillingMethod"
+    Properties:
+      RestApiId: !Ref "billingAPIGateway"
+  billingDevStage:
+    Type: AWS::ApiGateway::Stage
+    Properties:
+      StageName: !Ref Stage
+      Description: !Ref Stage
+      RestApiId: !Ref billingAPIGateway
+      DeploymentId: !Ref billingAPIGatewayDeployment
+  billingApiKey:
+    Type: 'AWS::ApiGateway::ApiKey'
+    DependsOn:
+      - billingAPIGatewayDeployment
+      - billingDevStage
+    Properties:
+      Description: CloudFormation API Key V1
+      Enabled: 'true'
+      StageKeys:
+        - RestApiId: !Ref billingAPIGateway
+          StageName: !Ref Stage
+  billingUsagePlan:
+    Type: 'AWS::ApiGateway::UsagePlan'
+    Properties:
+      ApiStages:
+        - ApiId: !Ref billingAPIGateway
+          Stage: !Ref billingDevStage
+      Description: Dev usage plan to tie to Key
+  billingUsagePlanKey:
+    Type: 'AWS::ApiGateway::UsagePlanKey'
+    Properties:
+      KeyId: !Ref billingApiKey
+      KeyType: API_KEY
+      UsagePlanId: !Ref billingUsagePlan
+#-----------------DYNAMO DB STARTS HERE --------------------      
+  preferencesDynamoDBTable: 
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties: 
+      AttributeDefinitions: 
+        - 
+          AttributeName: "premiseNumber"
+          AttributeType: "S"
+        - 
+          AttributeName: "accountNumber"
+          AttributeType: "S"
+      KeySchema: 
+        - 
+          AttributeName: "premiseNumber"
+          KeyType: "HASH"
+        - 
+          AttributeName: "accountNumber"
+          KeyType: "RANGE"
+      ProvisionedThroughput: 
+        ReadCapacityUnits: "5"
+        WriteCapacityUnits: "5"
+      TableName: !Sub '${Stage}_${Namespace}_customer_outage_preferences'
+      Tags: 
+        - Key: Name
+          Value: !Sub '${Stage}_${Namespace}_customer_outage_preferences'
+  previouslyNotifiedAlertsInfoDynamoDBTable: 
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties: 
+      AttributeDefinitions: 
+        - 
+          AttributeName: "PremiseNumber"
+          AttributeType: "S"
+      KeySchema: 
+        - 
+          AttributeName: "PremiseNumber"
+          KeyType: "HASH"
+      ProvisionedThroughput: 
+        ReadCapacityUnits: "100"
+        WriteCapacityUnits: "75"
+      TableName: 'PREVIOUSLY_NOTIFIED_OUTAGE_ALERTS_INFO'
+      Tags: 
+        - Key: Name
+          Value: 'PREVIOUSLY_NOTIFIED_OUTAGE_ALERTS_INFO'
