@@ -1,8 +1,0 @@
-/target/
-/bin/
-.factorypath
-/.settings/
-.classpath
-.project
-dependency-reduced-pom.xml
-/.apt_generated/
